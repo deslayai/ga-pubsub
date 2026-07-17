@@ -47,4 +47,8 @@ lerna-debug.log*
 # Temporary files
 *.tmp
 *.bak
+
 packages/pro/
+coverage/
+ga-automations/
+website-content/
