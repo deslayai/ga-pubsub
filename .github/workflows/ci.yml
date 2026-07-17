@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['18', '20', '22']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Root test suite (134 tests)
+        run: npm test
+
+      - name: Core package tests
+        run: cd packages/core && node ../../node_modules/vitest/vitest.mjs run --config ./vitest.config.ts
+
+      - name: Pro package tests
+        run: cd packages/pro && node ../../node_modules/vitest/vitest.mjs run --config ./vitest.config.ts
+
+      - name: Type-check core
+        run: cd packages/core && npx tsc --noEmit
+
+      - name: Type-check pro
+        run: cd packages/pro && npx tsc --noEmit
+
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Generate coverage
+        run: npm run test:coverage || npx vitest run --coverage
+      # Upload coverage HTML as a workflow artifact — no external service needed
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30

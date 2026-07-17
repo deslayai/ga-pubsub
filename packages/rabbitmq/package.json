@@ -1,0 +1,30 @@
+{
+  "name": "@ga-pubsub/rabbitmq",
+  "version": "1.0.0",
+  "description": "RabbitMQ AMQP transport adapter for GA-PubSub — publisher confirms, DLX, priority queues",
+  "type": "module",
+  "main":  "./dist/index.js",
+  "module":"./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import":  "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types":   "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": { "build": "tsc", "dev": "tsc --watch" },
+  "peerDependencies": {
+    "ga-pubsub": "^1.0.0",
+    "amqplib":   "^0.10.0"
+  },
+  "peerDependenciesMeta": { "amqplib": { "optional": false } },
+  "devDependencies": {
+    "amqplib":        "^0.10.0",
+    "@types/amqplib": "^0.10.0",
+    "@types/node":    "^20.0.0"
+  },
+  "keywords": ["ga-pubsub", "rabbitmq", "amqp", "messaging", "transport"],
+  "license": "MIT"
+}

@@ -1,0 +1,124 @@
+PAGE: deslay-ai.web.app/ga-pubsub-pro/queries
+TITLE: GA-PubSub Pro — Submit a Query
+================================================================================
+
+
+HERO
+----
+PRO Queries
+
+Have a question about licensing, your account, key renewal, or a technical
+issue with GA-PubSub Pro? Submit your query here and we will get back to you.
+
+Response time: 1–2 business days for Starter and Professional plans.
+Enterprise customers receive same-day responses on business days.
+
+
+WHAT THIS PAGE IS FOR
+---------------------
+Use this page for:
+
+  Licensing questions
+    - Which plan is right for my team or project?
+    - Can I use PRO in a SaaS product I sell to others?
+    - What does the commercial license allow and restrict?
+
+  Purchase and pricing
+    - How do I purchase a PRO license?
+    - Do you offer volume discounts for larger teams?
+    - Can I pay by invoice rather than card?
+
+  License key issues
+    - My key is showing an INVALID_SIGNATURE error.
+    - My key expired — how do I renew?
+    - I think my key was exposed — I need it revoked.
+    - I need a key for a new deployment.
+
+  Evaluation requests
+    - I would like to try PRO before purchasing.
+      (We issue short-term evaluation keys at no cost — just ask.)
+
+  Technical questions (PRO-specific)
+    - How do I configure the transport adapter for Redis?
+    - How do I integrate multi-tenant namespaces with my existing architecture?
+    - Is there a way to customise the authorization flow?
+
+
+WHAT TO INCLUDE IN YOUR QUERY
+------------------------------
+To get the fastest, most useful response, include:
+
+  Your name and company name (if applicable)
+  Your plan (Starter / Professional / Enterprise / Evaluating)
+  Your customer ID or account email if you are an existing customer
+  A clear description of your question or issue
+  For technical issues: ga-pubsub-pro version, runtime (Node.js version /
+  browser), and the error message or code if relevant
+
+
+QUERY FORM
+----------
+[ Name ]
+
+[ Email address ]
+
+[ Company / Organisation (optional) ]
+
+[ Plan ]
+  Dropdown: Evaluating / Starter / Professional / Enterprise / Not yet purchased
+
+[ Category ]
+  Dropdown: Licensing question / Purchase & pricing / License key issue /
+            Technical question / Key renewal / Key revocation / Other
+
+[ Subject ]
+
+[ Message ]
+  Text area — please be as specific as possible.
+
+[ Attach a file (optional) ]
+  For error logs, code snippets, or screenshots.
+
+[ Submit Query ]
+
+
+AFTER YOU SUBMIT
+----------------
+You will receive a confirmation email at the address you provided.
+
+A member of the team will review your query and respond within the timeframes
+above. If your issue is urgent (for example, a compromised key or a production
+outage caused by a key error), write URGENT in the subject line and we will
+prioritise accordingly.
+
+If you do not receive a confirmation email within 30 minutes, check your spam
+folder or re-submit.
+
+
+EXISTING CUSTOMERS — KEY RENEWAL
+----------------------------------
+If your license key is expiring or has expired, submit a renewal query with:
+  - Your customer ID or account email
+  - Your current plan
+  - The number of months or years you want to renew for
+
+We will issue a new key and send it to your registered email address.
+
+
+NOT SURE WHICH PLAN TO CHOOSE?
+-------------------------------
+Starter:       Individuals and small teams, up to 3 production deployments.
+Professional:  Growing teams, up to 25 deployments, up to 10 seats.
+Enterprise:    Large organisations, unlimited deployments and seats,
+               custom terms, SLA, audit rights, dedicated support.
+
+If you are unsure, describe your use case in the query and we will recommend
+the right plan for you.
+
+
+OTHER CONTACTS
+--------------
+General community & Core questions:  deslay-ai.web.app/community
+Customer service & enterprise:       deslay-ai.web.app/ga-pubsub-pro/services
+PRO main page:                       deslay-ai.web.app/ga-pubsub-pro
+Author: Ajithraj G

@@ -1,0 +1,171 @@
+PAGE: deslay-ai.web.app/ga-pubsub-pro
+TITLE: GA-PubSub Pro — Enterprise Pub/Sub with Security, Transports & Multi-Tenancy
+================================================================================
+
+
+HERO
+----
+GA-PubSub Pro
+
+Everything in GA-PubSub Core, plus the features production systems require:
+HMAC signing, rate limiting, authorization, replay-attack prevention,
+multi-tenancy, transport adapters, and a runtime license gate.
+
+A drop-in upgrade. Change your import — nothing else changes.
+
+[ View Pricing ]   [ Contact Sales ]   [ Ask a Question ]
+
+
+WHAT PRO ADDS
+-------------
+GA-PubSub Pro extends the free Core with security and infrastructure features
+that would otherwise require you to build, test, and maintain them yourself.
+Every PRO feature is production-tested, TypeScript-first, and works in the same
+runtimes as the Core — browser, Node.js, Deno, and edge.
+
+
+PRO FEATURES
+------------
+
+HMAC Envelope Signing
+Every event envelope is signed with HMAC-SHA256 before it is published.
+Inbound events from external transports are verified before delivery.
+A single tampered byte throws TamperDetectedError and stops delivery.
+No third-party signing service required — uses the Web Crypto API.
+
+Rate Limiting (Token Bucket)
+Configurable sustained events-per-second limit with a burst capacity buffer.
+Rate limiting is per-source — different publishers are tracked independently.
+Exceeding the limit throws RateLimitExceededError.
+
+Authorization
+Register authorizer functions per event pattern using bus.authorize().
+Patterns support exact names and wildcards. Authorizers receive the full
+event envelope and an AuthContext with userId, roles, permissions, and
+custom claims. Return true to allow, false to deny.
+
+Replay-Attack Prevention
+Outgoing envelopes carry a monotonic sequence number per source. Inbound
+events from external transports are checked against a SequenceTracker.
+Duplicate or rewound sequences throw ReplayAttackError.
+
+Payload Size Enforcement
+Maximum payload size in bytes is enforced before an event is delivered.
+Default limit is 64 KB. Configurable per bus instance or disabled entirely.
+Oversized payloads throw PayloadTooLargeError before any subscriber runs.
+
+Multi-Tenant Namespace Registry
+getBus(namespace) returns a singleton ProEventBus per namespace string.
+Namespaces are fully isolated — subscribers in one namespace never receive
+events from another. listNamespaces(), destroyNamespace(), and destroyAll()
+give full lifecycle control.
+
+Scoped Bus
+createScopedBus(bus, prefix) returns a ScopedBus that automatically prepends
+the prefix to every publish and subscribe call. Multiple independent scopes
+on the same bus are fully isolated from each other.
+
+Transport Adapters
+Connect ProEventBus to external message brokers via a TransportAdapter
+interface. Inbound messages from the transport are verified (HMAC + sequence)
+before being dispatched to local subscribers. Outbound publishes are forwarded
+to the transport after local delivery. Adapters: Redis, Kafka, WebSocket,
+NATS, RabbitMQ.
+
+Runtime License Key Validation
+ProEventBus validates your license key on first publish using HMAC-SHA256.
+No license server required — validation is entirely offline. The key encodes
+your customer ID, plan, seat count, and expiry. An expiry warning is logged
+30 days before the key expires. Operations without a valid key are blocked.
+
+
+DROP-IN UPGRADE
+---------------
+Switching from Core to Pro requires one change:
+
+  Before:   import { EventBus } from 'ga-pubsub-core';
+  After:    import { EventBus } from 'ga-pubsub-pro';
+
+ProEventBus is exported as EventBus from ga-pubsub-pro, so all existing
+code continues to work unchanged. PRO features are opt-in via constructor
+options.
+
+
+PRICING
+-------
+
+STARTER
+  For individuals and small teams.
+  Up to 3 production deployments.
+  Core + all PRO features.
+  Community support.
+  License key valid for 12 months.
+  Contact deslay-ai.web.app/ga-pubsub-pro/queries for pricing.
+
+PROFESSIONAL
+  For growing teams and companies.
+  Up to 25 production deployments.
+  Up to 10 seats.
+  Core + all PRO features.
+  Priority support via queries page.
+  License key valid for 12 months.
+  Contact deslay-ai.web.app/ga-pubsub-pro/queries for pricing.
+
+ENTERPRISE
+  For large organisations.
+  Unlimited deployments and seats.
+  Core + all PRO features.
+  Dedicated customer service.
+  Custom license terms available.
+  Audit rights and SLA on request.
+  Contact deslay-ai.web.app/ga-pubsub-pro/services for pricing.
+
+All plans include:
+  - All current and future PRO features for the license period
+  - Offline license key (no license server, no internet check at runtime)
+  - Access to the private GitHub repository containing the PRO package
+  - The right to use GA-PubSub Pro in your own applications
+
+
+FREQUENTLY ASKED QUESTIONS
+--------------------------
+Q: Can I try PRO before purchasing?
+A: Yes. Contact us through the queries page and we will issue a short-term
+   evaluation key at no cost.
+
+Q: What happens when my license key expires?
+A: ProEventBus logs a warning 30 days before expiry. After expiry, new bus
+   instances will not initialise. Renew at deslay-ai.web.app/ga-pubsub-pro/queries.
+
+Q: Does validation require an internet connection?
+A: No. The license key is validated entirely offline using HMAC-SHA256 with a
+   secret embedded in your key at issuance. No license server is contacted.
+
+Q: Can I use PRO in a SaaS product I sell to my customers?
+A: That depends on your plan. Starter and Professional allow you to use PRO
+   in internal applications. To build a product or SaaS that you sell to third
+   parties, you need the Enterprise plan. Contact us to discuss your use case.
+
+Q: Is the source code available?
+A: Yes. Licensed customers receive access to a private GitHub repository
+   containing the full TypeScript source for GA-PubSub Pro.
+
+Q: What is the difference between Core and Pro licensing?
+A: Core is under the Elastic License 2.0 — free to use, cannot redistribute.
+   Pro is a commercial license — requires a paid license key for production use.
+
+
+GET STARTED
+-----------
+  1. Contact us at deslay-ai.web.app/ga-pubsub-pro/queries
+  2. We issue a license key for your chosen plan
+  3. You are added as a collaborator on the private GitHub repository
+  4. Install the package and pass your key to new ProEventBus({ licenseKey })
+  5. All PRO features are immediately available
+
+
+CONTACT
+-------
+Licensing and purchase queries:  deslay-ai.web.app/ga-pubsub-pro/queries
+Customer service:                deslay-ai.web.app/ga-pubsub-pro/services
+Author: Ajithraj G              deslay-ai.web.app/ga-pubsub-pro

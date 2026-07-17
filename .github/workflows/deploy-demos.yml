@@ -1,0 +1,81 @@
+name: Deploy Demo Apps → GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'usage/frontend/**'
+      - 'packages/pro/usage/**'
+      - 'packages/core/src/**'
+      - 'packages/pro/src/**'
+  workflow_dispatch:   # allow manual trigger
+
+permissions:
+  contents: write   # push to gh-pages branch
+
+jobs:
+  build-and-deploy:
+    name: Build & deploy to GitHub Pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install monorepo dependencies
+        run: npm ci
+
+      # ── Build core demo frontend ─────────────────────────────────────────
+      - name: Install core demo deps
+        run: cd usage/frontend && npm install
+
+      - name: Build core demo
+        run: cd usage/frontend && npm run build
+        env:
+          # Vite base path for GitHub Pages: /REPO_NAME/
+          # Change REPO to your actual GitHub repo name
+          VITE_BASE_URL: /ga-pubsub/
+          # Backend URL — set to '' to use in-browser mode (no backend)
+          VITE_API_URL: ''
+
+      # ── Build PRO demo ───────────────────────────────────────────────────
+      - name: Install PRO demo deps
+        run: cd packages/pro/usage && npm install
+
+      - name: Build PRO demo
+        run: cd packages/pro/usage && npm run build
+        env:
+          VITE_BASE_URL: /ga-pubsub/pro/
+
+      # ── Assemble gh-pages output ─────────────────────────────────────────
+      # Layout:
+      #   /           → core demo   (usage/frontend/dist/)
+      #   /pro/       → PRO demo    (packages/pro/usage/dist/)
+      - name: Assemble GitHub Pages output
+        run: |
+          mkdir -p _site/pro
+          cp -r usage/frontend/dist/. _site/
+          cp -r packages/pro/usage/dist/. _site/pro/
+          echo "Core demo files: $(find _site -maxdepth 1 -type f | wc -l)"
+          echo "PRO demo files:  $(find _site/pro -type f | wc -l)"
+
+      # Deploy using GITHUB_TOKEN — no external service, no extra secrets
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _site
+          publish_branch: gh-pages
+          commit_message: "deploy: ${{ github.sha }}"
+          force_orphan: true
+
+      - name: Print URLs
+        run: |
+          REPO="${{ github.repository }}"
+          USER="${REPO%%/*}"
+          echo "Core demo: https://${USER}.github.io/ga-pubsub/"
+          echo "PRO  demo: https://${USER}.github.io/ga-pubsub/pro/"

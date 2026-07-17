@@ -1,0 +1,154 @@
+PAGE: deslay-ai.web.app/ga-pubsub
+TITLE: GA-PubSub Core — Free TypeScript Event Bus
+================================================================================
+
+
+HERO
+----
+GA-PubSub Core
+
+A lightweight, zero-dependency publish/subscribe event bus for TypeScript.
+Works in React, Node.js, Cloudflare Workers, Deno, and every modern runtime —
+no adapter, no configuration, no lock-in.
+
+Free to use. Source-available under the Elastic License 2.0.
+
+[ Get Started ]   [ View on GitHub ]   [ Explore PRO → ]
+
+
+TAGLINE ROW (3 columns)
+-----------------------
+Zero dependencies          |  Works everywhere          |  TypeScript-first
+Pure TypeScript, ships as  |  Browser, Node.js, Deno,  |  Full type safety,
+ESM + CJS dual build.      |  Edge — one API, no        |  generics, and strict
+No runtime bloat.          |  adapters needed.          |  inference built in.
+
+
+WHAT IS GA-PUBSUB?
+------------------
+GA-PubSub is a publish/subscribe event bus built for modern TypeScript projects.
+It lets different parts of your application communicate through named events —
+without tight coupling, without a message broker, and without any server
+infrastructure.
+
+Publish an event from one place. Subscribe to it anywhere else. Wildcards,
+middleware, schema validation, replay, and RPC come built in. It just works.
+
+
+FEATURES
+--------
+Pub / Sub
+Subscribe to exact event names or wildcard patterns. order.* matches
+order.created, order.updated, and order.cancelled. payments.** matches any
+depth beneath the payments namespace.
+
+Priority Ordering
+Multiple subscribers on the same event run in priority order — highest first.
+Critical handlers always execute before lower-priority ones.
+
+subscribeOnce
+Register a handler that fires exactly once and then removes itself automatically.
+No cleanup code needed.
+
+Middleware Pipeline
+Intercept, enrich, transform, or abort events before they reach subscribers.
+Add logging, validation enrichment, or custom filtering as composable steps.
+
+Schema Validation
+Register a validator for any event name. Invalid payloads throw a
+ValidationFailedError before any subscriber is called. Integrate with Zod,
+Yup, or any custom validator.
+
+Request / Response (RPC)
+bus.request() sends an event and waits for a response from the first
+bus.respond() handler. Configurable timeout. Perfect for service-to-service
+calls inside a single process.
+
+Replay Engine
+Late subscribers automatically receive previously published events from a
+configurable ring buffer. Wildcard-aware. Opt-out per subscription.
+
+TTL Guard Middleware
+Events with an expired time-to-live are silently dropped before reaching
+subscribers. Pass ttl in milliseconds when publishing.
+
+Metrics
+Built-in counters for publish count, delivery count, failure count, auth
+denials, and p95 delivery latency. No external monitoring agent required.
+
+Subscription Limit
+Set a maximum number of active subscriptions per bus instance to prevent
+runaway listener accumulation in long-running processes.
+
+Cancel In-Flight Requests
+Call handle.cancel() on any pending request to immediately reject the response
+promise. No dangling timers.
+
+
+INSTALLATION
+------------
+From GitHub Releases (no npm account needed):
+
+  npm install https://github.com/YOUR_ORG/ga-pubsub/releases/latest/download/ga-pubsub-core-1.0.0.tgz
+
+Or from npm (if published):
+
+  npm install ga-pubsub-core
+
+
+QUICK EXAMPLE
+-------------
+  import { EventBus } from 'ga-pubsub-core';
+
+  const bus = new EventBus({ namespace: 'my-app' });
+
+  bus.subscribe('user.created', (e) => {
+    console.log('New user:', e.payload);
+  });
+
+  await bus.publish('user.created', { id: '42', name: 'Ajith' });
+
+  // Wildcard — fires for user.created, user.updated, user.deleted ...
+  bus.subscribe('user.*', (e) => console.log(e.event, e.payload));
+
+
+FREE vs PRO
+-----------
+Feature                                   | Core (Free) | PRO
+------------------------------------------|:-----------:|:---:
+Pub / Sub, wildcards, priority            |      ✓      |  ✓
+Middleware pipeline                       |      ✓      |  ✓
+Schema validation                         |      ✓      |  ✓
+Replay engine, RPC, metrics               |      ✓      |  ✓
+HMAC envelope signing                     |      —      |  ✓
+Rate limiting (token bucket)              |      —      |  ✓
+Authorization (bus.authorize)             |      —      |  ✓
+Replay-attack prevention                  |      —      |  ✓
+Payload size enforcement                  |      —      |  ✓
+Multi-tenant namespace registry           |      —      |  ✓
+Scoped bus (auto-prefix)                  |      —      |  ✓
+Transport adapters (Redis, Kafka, NATS…)  |      —      |  ✓
+Runtime license key validation            |      —      |  ✓
+
+→ Need PRO features? See GA-PubSub Pro at deslay-ai.web.app/ga-pubsub-pro
+
+
+LICENSE
+-------
+GA-PubSub Core is free to use in any application — personal or commercial —
+under the Elastic License 2.0 (ELv2).
+
+You may use it, modify it internally, and ship applications built on top of it.
+You may not redistribute it, resell it, rebrand it, or offer it as a
+hosted/managed service to third parties.
+
+Full license text is available in the GitHub repository.
+
+
+AUTHOR
+------
+Built by Ajithraj G
+deslay-ai.web.app/ga-pubsub
+
+Questions and community: deslay-ai.web.app/community
+PRO edition: deslay-ai.web.app/ga-pubsub-pro

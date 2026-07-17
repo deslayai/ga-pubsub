@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [],
+  "linked": [
+    [
+      "ga-pubsub",
+      "@ga-pubsub/websocket",
+      "@ga-pubsub/sse",
+      "@ga-pubsub/broadcast-channel",
+      "@ga-pubsub/redis",
+      "@ga-pubsub/kafka",
+      "@ga-pubsub/nats",
+      "@ga-pubsub/rabbitmq"
+    ]
+  ],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}

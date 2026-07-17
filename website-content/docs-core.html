@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GA-PubSub Core — Documentation</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181b23;
+    --surface2: #1e2130;
+    --border: #2a2d3e;
+    --accent: #6c8aff;
+    --accent2: #4ade80;
+    --text: #e2e6f0;
+    --muted: #8891a8;
+    --code-bg: #13151f;
+    --sidebar-w: 260px;
+    --header-h: 56px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.7; }
+
+  /* ── Header ── */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px;
+    gap: 16px; z-index: 100;
+  }
+  header .logo { font-size: 17px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+  header .badge {
+    font-size: 11px; padding: 2px 9px; border-radius: 20px;
+    background: rgba(108,138,255,.15); color: var(--accent); font-weight: 600; border: 1px solid rgba(108,138,255,.3);
+  }
+  header nav { margin-left: auto; display: flex; gap: 24px; }
+  header nav a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; }
+  header nav a:hover { color: var(--text); }
+  header nav .cta {
+    padding: 6px 16px; border-radius: 6px; background: var(--accent);
+    color: #fff; font-weight: 600; font-size: 13px;
+  }
+
+  /* ── Layout ── */
+  .layout { display: flex; margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); }
+
+  /* ── Sidebar ── */
+  aside {
+    width: var(--sidebar-w); flex-shrink: 0;
+    background: var(--surface); border-right: 1px solid var(--border);
+    position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h));
+    overflow-y: auto; padding: 24px 0;
+  }
+  .nav-group { margin-bottom: 24px; }
+  .nav-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    color: var(--muted); text-transform: uppercase;
+    padding: 0 20px 8px;
+  }
+  aside a {
+    display: block; padding: 7px 20px; color: var(--muted);
+    text-decoration: none; font-size: 14px; transition: all .15s;
+    border-left: 2px solid transparent;
+  }
+  aside a:hover { color: var(--text); background: var(--surface2); }
+  aside a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(108,138,255,.07); }
+
+  /* ── Main ── */
+  main { flex: 1; min-width: 0; padding: 48px 64px 96px; max-width: 900px; }
+
+  /* ── Typography ── */
+  h1 { font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px;
+       background: linear-gradient(135deg, #fff 40%, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { font-size: 24px; font-weight: 700; margin: 52px 0 16px; padding-top: 16px;
+       border-top: 1px solid var(--border); color: #fff; }
+  h3 { font-size: 17px; font-weight: 600; margin: 32px 0 10px; color: var(--accent); }
+  p  { margin-bottom: 16px; color: var(--text); }
+  ul, ol { padding-left: 20px; margin-bottom: 16px; }
+  li { margin-bottom: 6px; }
+  a  { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { color: #fff; }
+
+  /* ── Hero strip ── */
+  .hero {
+    background: linear-gradient(135deg, rgba(108,138,255,.08), rgba(74,222,128,.05));
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 32px 36px; margin-bottom: 40px;
+  }
+  .hero p { margin: 8px 0 20px; color: var(--muted); font-size: 16px; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge-img { height: 20px; }
+
+  /* ── Code ── */
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 20px 24px; overflow-x: auto; margin: 16px 0 24px;
+    font-size: 13.5px; line-height: 1.6;
+  }
+  code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; }
+  p code, li code, td code {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 6px; font-size: 13px; color: #c9d1d9;
+  }
+
+  /* Syntax colours (manual) */
+  .kw  { color: #c792ea; }
+  .fn  { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cm  { color: #546e7a; font-style: italic; }
+  .num { color: #f78c6c; }
+  .cls { color: #ffcb6b; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; margin: 16px 0 28px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: var(--surface2); color: var(--muted); font-weight: 600;
+       text-align: left; padding: 10px 16px; border: 1px solid var(--border); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  td { padding: 10px 16px; border: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+  td:last-child { color: var(--muted); font-size: 13px; }
+
+  /* ── Callouts ── */
+  .callout {
+    border-left: 3px solid var(--accent); background: rgba(108,138,255,.07);
+    border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 20px 0;
+  }
+  .callout.warn { border-color: #f0b429; background: rgba(240,180,41,.07); }
+  .callout.tip  { border-color: var(--accent2); background: rgba(74,222,128,.07); }
+  .callout p { margin: 0; font-size: 14px; }
+  .callout strong { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; }
+
+  /* ── Feature grid ── */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+  }
+  .card h4 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+  .card p  { font-size: 13px; color: var(--muted); margin: 0; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center; padding: 32px; color: var(--muted);
+    font-size: 13px; border-top: 1px solid var(--border); margin-top: 48px;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <span class="logo">GA-PubSub</span>
+  <span class="badge">Core</span>
+  <nav>
+    <a href="docs-pro.html">PRO Docs</a>
+    <a href="https://deslay-ai.web.app/ga-pubsub">Website</a>
+    <a href="https://deslay-ai.web.app/community">Community</a>
+    <a href="https://deslay-ai.web.app/ga-pubsub-pro" class="cta">Upgrade to PRO →</a>
+  </nav>
+</header>
+
+<div class="layout">
+
+<!-- ── Sidebar ── -->
+<aside>
+  <div class="nav-group">
+    <div class="nav-label">Getting Started</div>
+    <a href="#introduction" class="active">Introduction</a>
+    <a href="#installation">Installation</a>
+    <a href="#quickstart">Quick Start</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Core Concepts</div>
+    <a href="#publish-subscribe">Pub / Sub</a>
+    <a href="#wildcards">Wildcards</a>
+    <a href="#priority">Priority</a>
+    <a href="#once">subscribeOnce</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Features</div>
+    <a href="#middleware">Middleware</a>
+    <a href="#schema">Schema Validation</a>
+    <a href="#rpc">Request / Response</a>
+    <a href="#replay">Replay Engine</a>
+    <a href="#ttl">TTL Guard</a>
+    <a href="#metrics">Metrics</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Reference</div>
+    <a href="#bus-options">EventBus Options</a>
+    <a href="#api">API Reference</a>
+    <a href="#errors">Error Classes</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">More</div>
+    <a href="#license">License</a>
+    <a href="#pro">PRO Edition</a>
+  </div>
+</aside>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>GA-PubSub Core</h1>
+    <p>A lightweight, zero-dependency pub/sub event bus for TypeScript.<br>
+       Browser · Node.js · Edge · Deno — one API, everywhere.</p>
+    <div class="badges">
+      <img class="badge-img" src="https://img.shields.io/badge/License-Elastic%202.0-blue.svg" alt="Elastic-2.0" />
+      <img class="badge-img" src="https://img.shields.io/badge/TypeScript-5.x-3178c6.svg?logo=typescript&logoColor=white" alt="TypeScript" />
+      <img class="badge-img" src="https://img.shields.io/badge/module-ESM%20%2B%20CJS-orange.svg" alt="ESM" />
+      <img class="badge-img" src="https://img.shields.io/badge/dependencies-0-brightgreen.svg" alt="Zero deps" />
+    </div>
+  </div>
+
+  <!-- Introduction -->
+  <section id="introduction">
+    <h2>Introduction</h2>
+    <p>GA-PubSub Core is a publish/subscribe event bus for TypeScript. It lets any part
+       of your application publish named events, and any other part subscribe to them —
+       without tight coupling or a shared reference to a single object.</p>
+    <p>It works identically in a React SPA, a Node.js microservice, a Cloudflare Worker,
+       and a Deno edge function. No adapter, no polyfill, no platform-specific setup.</p>
+    <div class="grid">
+      <div class="card"><h4>Zero dependencies</h4><p>Pure TypeScript. Ships as ESM + CJS dual build. Nothing extra installed.</p></div>
+      <div class="card"><h4>Works everywhere</h4><p>Browser, Node 18+, Deno, Bun, Cloudflare Workers, Vercel Edge.</p></div>
+      <div class="card"><h4>Wildcards built in</h4><p>Subscribe to <code>order.*</code> or <code>payments.**</code> — no plugin needed.</p></div>
+      <div class="card"><h4>Full TypeScript</h4><p>Generic payloads, strict inference, no <code>any</code> required.</p></div>
+    </div>
+  </section>
+
+  <!-- Installation -->
+  <section id="installation">
+    <h2>Installation</h2>
+    <p>From a GitHub Release (no registry account needed):</p>
+    <pre><code>npm install https://github.com/YOUR_ORG/ga-pubsub/releases/latest/download/ga-pubsub-core-1.0.0.tgz</code></pre>
+    <p>Or from npm if published:</p>
+    <pre><code>npm install ga-pubsub-core</code></pre>
+    <div class="callout tip"><p><strong>Tip</strong> — Requires Node 18+ or any modern browser. No peer dependencies.</p></div>
+  </section>
+
+  <!-- Quick Start -->
+  <section id="quickstart">
+    <h2>Quick Start</h2>
+    <pre><code><span class="kw">import</span> { <span class="cls">EventBus</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-core'</span>;
+
+<span class="kw">const</span> bus = <span class="kw">new</span> <span class="cls">EventBus</span>({ namespace: <span class="str">'my-app'</span> });
+
+<span class="cm">// Subscribe to an exact event</span>
+bus.<span class="fn">subscribe</span>(<span class="str">'user.created'</span>, (e) =&gt; {
+  console.<span class="fn">log</span>(<span class="str">'New user:'</span>, e.payload);
+});
+
+<span class="cm">// Publish</span>
+<span class="kw">await</span> bus.<span class="fn">publish</span>(<span class="str">'user.created'</span>, { id: <span class="str">'42'</span>, name: <span class="str">'Ajith'</span> });
+
+<span class="cm">// Unsubscribe</span>
+<span class="kw">const</span> handle = bus.<span class="fn">subscribe</span>(<span class="str">'user.updated'</span>, handler);
+handle.<span class="fn">unsubscribe</span>();
+
+<span class="cm">// Tear down</span>
+<span class="kw">await</span> bus.<span class="fn">destroy</span>();</code></pre>
+  </section>
+
+  <!-- Pub/Sub -->
+  <section id="publish-subscribe">
+    <h2>Publish / Subscribe</h2>
+    <p><code>bus.publish(event, payload, opts?)</code> delivers an event to every matching subscriber in order. It returns a Promise that resolves after all subscribers have been called.</p>
+    <p><code>bus.subscribe(pattern, handler, opts?)</code> registers a handler and returns a handle with an <code>unsubscribe()</code> method.</p>
+    <pre><code>bus.<span class="fn">subscribe</span>(<span class="str">'order.placed'</span>, <span class="kw">async</span> (envelope) =&gt; {
+  <span class="kw">const</span> { orderId, total } = envelope.payload <span class="kw">as</span> { orderId: <span class="kw">string</span>; total: <span class="kw">number</span> };
+  <span class="kw">await</span> <span class="fn">sendConfirmationEmail</span>(orderId, total);
+});
+
+<span class="kw">await</span> bus.<span class="fn">publish</span>(<span class="str">'order.placed'</span>, { orderId: <span class="str">'ord_001'</span>, total: <span class="num">49.99</span> });</code></pre>
+
+    <h3>Envelope shape</h3>
+    <p>Every subscriber receives an <code>EventEnvelope</code>:</p>
+    <div class="table-wrap"><table>
+      <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>id</code></td><td>string</td><td>Unique envelope ID (UUID)</td></tr>
+      <tr><td><code>event</code></td><td>string</td><td>Event name as published</td></tr>
+      <tr><td><code>namespace</code></td><td>string</td><td>Bus namespace</td></tr>
+      <tr><td><code>payload</code></td><td>unknown</td><td>Data passed to publish()</td></tr>
+      <tr><td><code>timestamp</code></td><td>number</td><td>Unix ms at publish time</td></tr>
+      <tr><td><code>source</code></td><td>string</td><td>Bus source identifier</td></tr>
+      <tr><td><code>correlationId</code></td><td>string</td><td>Shared across a request chain</td></tr>
+      <tr><td><code>causationId</code></td><td>string</td><td>ID of the triggering envelope</td></tr>
+      <tr><td><code>ttl</code></td><td>number?</td><td>Milliseconds until expiry</td></tr>
+    </table></div>
+  </section>
+
+  <!-- Wildcards -->
+  <section id="wildcards">
+    <h2>Wildcards</h2>
+    <p>Patterns support two wildcard tokens:</p>
+    <div class="table-wrap"><table>
+      <tr><th>Token</th><th>Matches</th><th>Example pattern</th><th>Matches</th></tr>
+      <tr><td><code>*</code></td><td>Exactly one segment</td><td><code>order.*</code></td><td><code>order.created</code>, <code>order.cancelled</code></td></tr>
+      <tr><td><code>**</code></td><td>One or more segments</td><td><code>payments.**</code></td><td><code>payments.card.charged</code>, <code>payments.refund.issued</code></td></tr>
+    </table></div>
+    <pre><code><span class="cm">// Matches order.created, order.updated, order.cancelled</span>
+bus.<span class="fn">subscribe</span>(<span class="str">'order.*'</span>, handler);
+
+<span class="cm">// Matches any event one or more levels beneath payments.</span>
+bus.<span class="fn">subscribe</span>(<span class="str">'payments.**'</span>, handler);
+
+<span class="cm">// Mixed</span>
+bus.<span class="fn">subscribe</span>(<span class="str">'app.*.error'</span>, handler);</code></pre>
+    <div class="callout"><p><strong>Note</strong> — <code>a.**</code> does <em>not</em> match <code>a</code> alone. The dot separator requires at least one trailing segment.</p></div>
+  </section>
+
+  <!-- Priority -->
+  <section id="priority">
+    <h2>Priority Ordering</h2>
+    <p>Subscribers on the same event run in descending priority order. Default priority is <code>0</code>.</p>
+    <pre><code>bus.<span class="fn">subscribe</span>(<span class="str">'payment.received'</span>, <span class="fn">auditLog</span>,      { priority: <span class="num">10</span> }); <span class="cm">// runs first</span>
+bus.<span class="fn">subscribe</span>(<span class="str">'payment.received'</span>, <span class="fn">sendReceipt</span>,   { priority: <span class="num">5</span>  });
+bus.<span class="fn">subscribe</span>(<span class="str">'payment.received'</span>, <span class="fn">updateMetrics</span>, { priority: <span class="num">1</span>  }); <span class="cm">// runs last</span></code></pre>
+  </section>
+
+  <!-- subscribeOnce -->
+  <section id="once">
+    <h2>subscribeOnce</h2>
+    <p>Fires exactly once then removes itself automatically.</p>
+    <pre><code>bus.<span class="fn">subscribeOnce</span>(<span class="str">'app.ready'</span>, (e) =&gt; {
+  console.<span class="fn">log</span>(<span class="str">'App started at'</span>, e.timestamp);
+});</code></pre>
+  </section>
+
+  <!-- Middleware -->
+  <section id="middleware">
+    <h2>Middleware</h2>
+    <p>Middleware functions intercept every event before subscribers are called. They run in registration order and must call <code>next()</code> to continue the chain.</p>
+    <pre><code><span class="cm">// Enrich every envelope</span>
+bus.<span class="fn">use</span>(<span class="kw">async</span> (envelope, next) =&gt; {
+  (envelope <span class="kw">as any</span>).payload = { ...envelope.payload <span class="kw">as object</span>, processedAt: <span class="cls">Date</span>.<span class="fn">now</span>() };
+  <span class="kw">await</span> <span class="fn">next</span>();
+});
+
+<span class="cm">// Abort — throws MiddlewareAbortError, subscribers never run</span>
+bus.<span class="fn">use</span>(<span class="kw">async</span> (envelope, next) =&gt; {
+  <span class="kw">if</span> (<span class="fn">isBanned</span>(envelope.source)) <span class="kw">throw new</span> <span class="cls">MiddlewareAbortError</span>(envelope.event);
+  <span class="kw">await</span> <span class="fn">next</span>();
+});</code></pre>
+
+    <h3>Built-in middleware</h3>
+    <pre><code><span class="kw">import</span> { <span class="fn">loggingMiddleware</span>, <span class="fn">ttlGuardMiddleware</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-core'</span>;
+
+bus.<span class="fn">use</span>(<span class="fn">loggingMiddleware</span>({ level: <span class="str">'debug'</span> }));
+bus.<span class="fn">use</span>(<span class="fn">ttlGuardMiddleware</span>());</code></pre>
+  </section>
+
+  <!-- Schema Validation -->
+  <section id="schema">
+    <h2>Schema Validation</h2>
+    <p>Register a validator for an event name. Invalid payloads throw <code>ValidationFailedError</code> before any subscriber is called.</p>
+    <pre><code>bus.<span class="fn">registerSchema</span>(<span class="str">'order.placed'</span>, {
+  name: <span class="str">'OrderSchema'</span>,
+  validate: (payload) =&gt; {
+    <span class="kw">const</span> p = payload <span class="kw">as</span> { orderId?: <span class="kw">unknown</span>; total?: <span class="kw">unknown</span> };
+    <span class="kw">if</span> (<span class="kw">typeof</span> p.orderId !== <span class="str">'string'</span>)
+      <span class="kw">return</span> { valid: <span class="kw">false</span>, errors: [{ path: <span class="str">'orderId'</span>, message: <span class="str">'required string'</span> }] };
+    <span class="kw">if</span> (<span class="kw">typeof</span> p.total !== <span class="str">'number'</span>)
+      <span class="kw">return</span> { valid: <span class="kw">false</span>, errors: [{ path: <span class="str">'total'</span>, message: <span class="str">'required number'</span> }] };
+    <span class="kw">return</span> { valid: <span class="kw">true</span> };
+  },
+});
+
+<span class="cm">// Throws ValidationFailedError — orderId must be a string</span>
+<span class="kw">await</span> bus.<span class="fn">publish</span>(<span class="str">'order.placed'</span>, { orderId: <span class="num">123</span>, total: <span class="num">49.99</span> });</code></pre>
+    <p>Works with any validator — Zod, Yup, or custom. Just return <code>{ valid: true }</code> or <code>{ valid: false, errors }</code>.</p>
+  </section>
+
+  <!-- RPC -->
+  <section id="rpc">
+    <h2>Request / Response (RPC)</h2>
+    <p><code>bus.request()</code> sends an event and awaits a single response from a registered <code>bus.respond()</code> handler. Times out if no handler responds within <code>timeoutMs</code>.</p>
+    <pre><code><span class="cm">// Responder (register once, usually at startup)</span>
+bus.<span class="fn">respond</span>&lt;{ a: <span class="kw">number</span>; b: <span class="kw">number</span> }, { result: <span class="kw">number</span> }&gt;(
+  <span class="str">'math.add'</span>,
+  (e) =&gt; ({ result: e.payload.a + e.payload.b })
+);
+
+<span class="cm">// Requester</span>
+<span class="kw">const</span> { response, cancel } = bus.<span class="fn">request</span>&lt;
+  { a: <span class="kw">number</span>; b: <span class="kw">number</span> },
+  { result: <span class="kw">number</span> }
+&gt;(<span class="str">'math.add'</span>, { a: <span class="num">3</span>, b: <span class="num">7</span> }, { timeoutMs: <span class="num">2000</span> });
+
+<span class="kw">const</span> env = <span class="kw">await</span> response;
+console.<span class="fn">log</span>(env.payload.result); <span class="cm">// 10</span>
+
+<span class="cm">// Cancel if needed</span>
+<span class="fn">cancel</span>();</code></pre>
+  </section>
+
+  <!-- Replay -->
+  <section id="replay">
+    <h2>Replay Engine</h2>
+    <p>When replay is enabled, late subscribers automatically receive previously published events from a configurable ring buffer.</p>
+    <pre><code><span class="kw">const</span> bus = <span class="kw">new</span> <span class="cls">EventBus</span>({
+  replay: { limit: <span class="num">100</span>, replayWildcards: <span class="kw">true</span> }
+});
+
+<span class="kw">await</span> bus.<span class="fn">publish</span>(<span class="str">'app.started'</span>, { version: <span class="str">'2.0'</span> });
+<span class="kw">await</span> bus.<span class="fn">publish</span>(<span class="str">'app.configured'</span>, { theme: <span class="str">'dark'</span> });
+
+<span class="cm">// Late subscriber — receives both replayed events immediately</span>
+bus.<span class="fn">subscribe</span>(<span class="str">'app.*'</span>, (e) =&gt; console.<span class="fn">log</span>(<span class="str">'replayed:'</span>, e.event));
+
+<span class="cm">// Opt out of replay for a specific subscription</span>
+bus.<span class="fn">subscribe</span>(<span class="str">'app.*'</span>, handler, { replay: <span class="kw">false</span> });</code></pre>
+  </section>
+
+  <!-- TTL -->
+  <section id="ttl">
+    <h2>TTL Guard</h2>
+    <p>Publish with a <code>ttl</code> (milliseconds). The built-in <code>ttlGuardMiddleware</code> silently drops the event if it arrives at a subscriber after the TTL has elapsed.</p>
+    <pre><code>bus.<span class="fn">use</span>(<span class="fn">ttlGuardMiddleware</span>());
+
+<span class="kw">await</span> bus.<span class="fn">publish</span>(<span class="str">'cache.invalidate'</span>, { key: <span class="str">'user:42'</span> }, { ttl: <span class="num">5000</span> });
+<span class="cm">// Dropped if delivered more than 5 seconds after publish</span></code></pre>
+  </section>
+
+  <!-- Metrics -->
+  <section id="metrics">
+    <h2>Metrics</h2>
+    <pre><code><span class="kw">const</span> m = bus.<span class="fn">getMetrics</span>();
+
+m.publishCount        <span class="cm">// total events published</span>
+m.deliveryCount       <span class="cm">// total successful deliveries</span>
+m.failureCount        <span class="cm">// subscriber errors</span>
+m.authDenialCount     <span class="cm">// authorization denials</span>
+m.activeSubscriptions <span class="cm">// current live subscriptions</span>
+m.p95LatencyMs        <span class="cm">// p95 delivery latency over last 1000 events</span></code></pre>
+  </section>
+
+  <!-- EventBus Options -->
+  <section id="bus-options">
+    <h2>EventBus Options</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      <tr><td><code>namespace</code></td><td>string</td><td><code>'default'</code></td><td>Logical name for this bus instance</td></tr>
+      <tr><td><code>source</code></td><td>string</td><td><code>'ga-pubsub'</code></td><td>Source identifier stamped on every envelope</td></tr>
+      <tr><td><code>replay</code></td><td><code>{ limit, replayWildcards }</code></td><td>disabled</td><td>Enable the replay ring buffer</td></tr>
+      <tr><td><code>maxSubscriptions</code></td><td>number</td><td>unlimited</td><td>Cap on active subscriptions per bus</td></tr>
+      <tr><td><code>onError</code></td><td>function</td><td>—</td><td>Global error handler called on subscriber throws</td></tr>
+    </table></div>
+  </section>
+
+  <!-- API Reference -->
+  <section id="api">
+    <h2>API Reference</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>publish(event, payload, opts?)</code></td><td><code>Promise&lt;void&gt;</code></td><td>Run middleware + notify all matching subscribers</td></tr>
+      <tr><td><code>subscribe(pattern, handler, opts?)</code></td><td><code>SubscriptionHandle</code></td><td>Register a subscriber; returns <code>{ unsubscribe() }</code></td></tr>
+      <tr><td><code>subscribeOnce(pattern, handler, opts?)</code></td><td><code>SubscriptionHandle</code></td><td>Subscribe for one delivery only</td></tr>
+      <tr><td><code>use(middleware)</code></td><td><code>this</code></td><td>Append a middleware function to the pipeline</td></tr>
+      <tr><td><code>registerSchema(event, validator)</code></td><td><code>this</code></td><td>Register a payload validator for an event name</td></tr>
+      <tr><td><code>request(event, payload, opts?)</code></td><td><code>{ response, cancel }</code></td><td>RPC send — awaits a single responder reply</td></tr>
+      <tr><td><code>respond(event, handler)</code></td><td><code>SubscriptionHandle</code></td><td>Register an RPC responder</td></tr>
+      <tr><td><code>getMetrics()</code></td><td><code>BusMetrics</code></td><td>Current metrics snapshot</td></tr>
+      <tr><td><code>destroy()</code></td><td><code>Promise&lt;void&gt;</code></td><td>Tear down all subscriptions and clear replay history</td></tr>
+    </table></div>
+  </section>
+
+  <!-- Errors -->
+  <section id="errors">
+    <h2>Error Classes</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Class</th><th>Code</th><th>When thrown</th></tr>
+      <tr><td><code>GAPubSubError</code></td><td>base</td><td>Base class — all errors extend this</td></tr>
+      <tr><td><code>ValidationFailedError</code></td><td><code>VALIDATION_FAILED</code></td><td>Registered schema check returns invalid</td></tr>
+      <tr><td><code>RequestTimeoutError</code></td><td><code>REQUEST_TIMEOUT</code></td><td>No RPC responder within <code>timeoutMs</code></td></tr>
+      <tr><td><code>SubscriptionLimitError</code></td><td><code>SUBSCRIPTION_LIMIT</code></td><td><code>maxSubscriptions</code> cap reached</td></tr>
+      <tr><td><code>MiddlewareAbortError</code></td><td><code>MIDDLEWARE_ABORT</code></td><td>Middleware throws to stop delivery</td></tr>
+    </table></div>
+  </section>
+
+  <!-- License -->
+  <section id="license">
+    <h2>License</h2>
+    <p>GA-PubSub Core is released under the <strong>Elastic License 2.0 (ELv2)</strong>.</p>
+    <p>You are free to use it in any application — personal or commercial — at no cost. You may not redistribute it, resell it, rebrand it as your own library, or offer it as a hosted service to third parties.</p>
+    <p>Full license text: <a href="https://github.com/YOUR_ORG/ga-pubsub/blob/main/packages/core/LICENSE">LICENSE on GitHub</a></p>
+    <p>For permitted-use questions: <a href="https://deslay-ai.web.app/community">deslay-ai.web.app/community</a></p>
+  </section>
+
+  <!-- PRO -->
+  <section id="pro">
+    <h2>PRO Edition</h2>
+    <p>Need HMAC signing, rate limiting, authorization, replay-attack prevention, multi-tenancy, or transport adapters? GA-PubSub Pro is a drop-in upgrade.</p>
+    <pre><code><span class="cm">// Before</span>
+<span class="kw">import</span> { <span class="cls">EventBus</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-core'</span>;
+
+<span class="cm">// After — nothing else changes</span>
+<span class="kw">import</span> { <span class="cls">EventBus</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;</code></pre>
+    <p><a href="docs-pro.html">→ Read the PRO documentation</a> &nbsp;·&nbsp; <a href="https://deslay-ai.web.app/ga-pubsub-pro">View pricing</a></p>
+  </section>
+
+</main>
+</div>
+
+<footer>
+  <p>Built by <a href="https://deslay-ai.web.app/ga-pubsub">Ajithraj G</a> &nbsp;·&nbsp;
+     <a href="https://deslay-ai.web.app/community">Community</a> &nbsp;·&nbsp;
+     <a href="https://deslay-ai.web.app/ga-pubsub-pro">GA-PubSub Pro</a> &nbsp;·&nbsp;
+     Elastic License 2.0
+  </p>
+</footer>
+
+<script>
+  // Highlight active nav link on scroll
+  const links = document.querySelectorAll('aside a');
+  const sections = document.querySelectorAll('section[id]');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`aside a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

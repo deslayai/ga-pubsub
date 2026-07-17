@@ -1,0 +1,142 @@
+PAGE: deslay-ai.web.app/ga-pubsub-pro  (License Key section / Help)
+TITLE: GA-PubSub Pro — License Key Help
+================================================================================
+
+NOTE FOR WEB DEVELOPER: This content can live as a dedicated section on the
+main PRO page, or as a separate /ga-pubsub-pro/keys route. It is the page
+users land on when a runtime license error links them here.
+================================================================================
+
+
+HERO
+----
+License Key Help
+
+If you received a license error from GA-PubSub Pro, you are in the right place.
+Find your error below and follow the steps to resolve it.
+
+[ Purchase a License ]   [ Contact Support ]
+
+
+WHAT IS A LICENSE KEY?
+----------------------
+A GA-PubSub Pro license key is a signed token that identifies your account,
+your plan, your seat count, and your key's expiry date.
+
+It looks like this:
+  lk_eyJjaWQiOiJhY21lLWNvcnAiLCJwbGFuIjoicHJvZmVzc2lvbmFsIn0.abc123...
+
+You receive it by email after purchasing a PRO plan. It is unique to your
+account and must not be shared with others.
+
+
+HOW TO USE YOUR LICENSE KEY
+---------------------------
+Pass the key to ProEventBus through the licenseKey constructor option:
+
+  import { ProEventBus } from 'ga-pubsub-pro';
+
+  const bus = new ProEventBus({
+    namespace: 'my-app',
+    licenseKey: process.env.GA_PUBSUB_LICENSE_KEY,
+  });
+
+Important rules:
+  - Store the key in an environment variable. Never hardcode it in source.
+  - Never include it in a frontend / browser bundle. Keep it server-side only.
+  - Do not commit it to version control (add the env var name to .gitignore).
+  - Do not share it with anyone outside your licensed team.
+
+The key is validated offline on the first publish() call. No internet
+connection is required at runtime.
+
+
+ERROR MESSAGES AND FIXES
+------------------------
+
+ERROR: "No GA-PubSub Pro license key provided."
+Code: MISSING_KEY
+
+You created a ProEventBus instance without passing a licenseKey option.
+
+Fix:
+  1. Set your key as an environment variable:
+       export GA_PUBSUB_LICENSE_KEY="lk_your-key-here"
+  2. Pass it to the constructor:
+       new ProEventBus({ licenseKey: process.env.GA_PUBSUB_LICENSE_KEY })
+
+If you do not have a key yet, purchase one at:
+  deslay-ai.web.app/ga-pubsub-pro
+
+
+ERROR: "License key format is invalid."
+Code: INVALID_FORMAT
+
+The key string does not match the expected format (lk_{payload}.{signature}).
+
+Fix:
+  - Copy the key exactly as it was issued. Do not add spaces or line breaks.
+  - Check that the full key is present. Keys are long — confirm it was not
+    truncated when copying from email or a config file.
+  - If the key appears correct but the error persists, request a replacement
+    key at deslay-ai.web.app/ga-pubsub-pro/queries.
+
+
+ERROR: "License key signature is invalid."
+Code: INVALID_SIGNATURE
+
+The key's HMAC signature does not match its payload. This means the key was
+altered, corrupted, or issued with a different signing secret.
+
+Fix:
+  - Do not modify the key in any way.
+  - Confirm you are using the key for the correct environment (keys issued
+    for one account cannot be used on another).
+  - If you believe the key is correct, contact us at:
+    deslay-ai.web.app/ga-pubsub-pro/queries
+
+
+ERROR: "License key has expired."
+Code: EXPIRED
+
+Your key's expiry date has passed.
+
+Fix:
+  - Renew your license at deslay-ai.web.app/ga-pubsub-pro/queries.
+  - Once renewed, you will receive a new key by email.
+  - Replace the old key in your environment variable with the new one.
+
+Note: GA-PubSub Pro logs a warning 30 days before expiry so you have time
+to renew without any service interruption.
+
+
+EXPIRY WARNING (not an error)
+------------------------------
+Message: "[GA-PubSub Pro] License for 'your-account' expires in N day(s). Renew at ..."
+
+This is a warning, not an error. Your key still works. It will stop working
+when the expiry date is reached.
+
+Action: Renew before the expiry date at deslay-ai.web.app/ga-pubsub-pro/queries.
+
+
+SECURITY — KEY COMPROMISED?
+----------------------------
+If you believe your license key has been exposed (committed to a public repo,
+shared accidentally, included in a client-side bundle), contact us immediately:
+
+  deslay-ai.web.app/ga-pubsub-pro/queries
+
+Under the PRO license terms, you must notify us within 48 hours of a suspected
+key exposure. We will revoke the compromised key and issue a replacement.
+
+
+STILL STUCK?
+------------
+If your error is not listed above, or the fix did not work:
+
+  Submit a query:      deslay-ai.web.app/ga-pubsub-pro/queries
+  Customer service:    deslay-ai.web.app/ga-pubsub-pro/services
+
+Include your error code, your plan name, and the ProEventBus version you
+are using (check your package.json).

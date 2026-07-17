@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/websocket" },
+    { "path": "./packages/sse" },
+    { "path": "./packages/broadcast-channel" },
+    { "path": "./packages/redis" },
+    { "path": "./packages/kafka" },
+    { "path": "./packages/nats" },
+    { "path": "./packages/rabbitmq" }
+  ],
+  "files": []
+}

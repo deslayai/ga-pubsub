@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Media Automation — GA Automations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; }
+    .resizing * { user-select: none !important; }
+    .resizing-h * { cursor: col-resize !important; }
+    #config-panel { display: none; }
+    #config-panel.open { display: flex; }
+    #config-resizer { display: none; }
+    #config-resizer.open { display: flex; }
+    #mobile-backdrop { display: none; }
+    #mobile-backdrop.show { display: block; }
+    .workflow-item { cursor: pointer; }
+    .delete-wf-btn { opacity: 0; }
+    .workflow-item:hover .delete-wf-btn { opacity: 1; }
+    textarea, input[type=text], input[type=password] { font-size: 14px; }
+    #d3-container svg { display: block; }
+  </style>
+</head>
+<body class="overflow-hidden bg-slate-50">
+
+<div id="root" class="h-screen w-full"></div>
+
+<script type="module">
+// ═══════════════════════════════════════════════════════════════════════════════
+//  IMPORTS — Firebase Web SDK v10 (Modular, loaded via CDN)
+// ═══════════════════════════════════════════════════════════════════════════════
+import { initializeApp }
+  from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getFirestore, collection, onSnapshot, doc, addDoc, deleteDoc, updateDoc }
+  from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CONFIGURATION — Replace with your Firebase project credentials
+// ═══════════════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "your-project.firebaseapp.com",
+  projectId:         "your-project-id",
+  storageBucket:     "your-project.appspot.com",
+  messagingSenderId: "123456789012",
+  appId:             "1:123456789012:web:abcdef1234567890"
+};
+const APP_ID      = 'ga-automations-social';
+const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                  ? 'http://localhost:3000'
+                  : 'https://YOUR_BACKEND_DOMAIN.com';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  FIREBASE INIT
+// ═══════════════════════════════════════════════════════════════════════════════
+const fbApp = initializeApp(FIREBASE_CONFIG);
+const auth  = getAuth(fbApp);
+const db    = getFirestore(fbApp);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  APPLICATION STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+const S = {
+  user:             null,
+  isAuthLoading:    true,
+  workflows:        [],
+  isCreating:       false,
+  isSaving:         false,
+  selectedWorkflow: null,
+  activeForm: {
+    name:    '',
+    trigger: { type: 'webhook', schedule: '' },
+    steps:   []
+  },
+  editingStep: null,   // reference into activeForm.trigger or activeForm.steps[i]
+  editingType: null,   // 'trigger' | 'step'
+  d3Available:    false,
+  isMobile:       window.innerWidth < 768,
+  showSidebar:    window.innerWidth >= 768,
+  sidebarWidth:   300,
+  configWidth:    440,
+  isResizingSidebar: false,
+  isResizingConfig:  false,
+  dataUnsubscribe:   null,
+  d3ResizeTimer:     null,
+  mainInjected:      false
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════════
+const COLORS = {
+  trigger:'#4f46e5', ai_gemini:'#9333ea', instagram:'#db2777',
+  linkedin:'#2563eb', log:'#059669'
+};
+const ICONS = {
+  trigger:'⚡', ai_gemini:'✨', instagram:'📸', linkedin:'💼', log:'📝'
+};
+const STEP_DEFAULTS = {
+  ai_gemini: { name:'Gemini Generation', config:{ systemPrompt:'', userPrompt:'', enableDelay:false } },
+  instagram: { name:'Instagram Post',    config:{ accountId:'', token:'', imageUrl:'', caption:'' } },
+  linkedin:  { name:'LinkedIn Post',     config:{ authorUrn:'', token:'', text:'', mediaUrl:'' } },
+  log:       { name:'Completion Log',    config:{ message:'' } }
+};
+
+const gc = t => COLORS[t] || '#64748b';
+const gi = t => ICONS[t]  || '⚙️';
+const eid = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const gid = () => Math.random().toString(36).slice(2,9);
+
+function getWebhookUrl() {
+  const wf  = S.selectedWorkflow?.id || '{GENERATED_AFTER_SAVE}';
+  const uid = S.user?.uid || '{YOUR_USER_ID}';
+  return `${BACKEND_URL}/webhook/${APP_ID}/${uid}/${wf}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  RENDER — TOP-LEVEL STATE MACHINE
+// ═══════════════════════════════════════════════════════════════════════════════
+const root = document.getElementById('root');
+
+function renderApp() {
+  if (S.isAuthLoading) { root.innerHTML = tmplLoading(); return; }
+  if (!S.user)         { root.innerHTML = tmplLogin();   bindLoginEvents(); return; }
+
+  if (!S.mainInjected) {
+    root.innerHTML = tmplMainShell();
+    S.mainInjected = true;
+    bindGlobalEvents();
+  }
+  refreshUser();
+  refreshSidebar();
+  refreshCanvas();
+  refreshConfigPanel();
+}
+
+// ── Templates ──────────────────────────────────────────────────────────────────
+
+function tmplLoading() { return `
+  <div class="h-screen w-full flex flex-col items-center justify-center bg-slate-50">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+    <p class="text-slate-500 text-sm animate-pulse font-medium">Checking authentication...</p>
+  </div>`; }
+
+function tmplLogin() { return `
+  <div class="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-indigo-50/40 p-4">
+    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-slate-100">
+      <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg text-2xl">📱</div>
+      <h1 class="text-2xl font-bold text-slate-800 mb-1">Social Media Automation</h1>
+      <p class="text-slate-400 text-xs mb-1 font-medium">GA Automations Engine</p>
+      <p class="text-slate-500 text-sm mb-8">Sign in to manage your AI-powered social media pipelines.</p>
+      <button id="btn-google" class="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/50 text-slate-700 px-4 py-3.5 rounded-xl font-semibold transition-all shadow-sm hover:shadow-md">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Continue with Google
+      </button>
+    </div>
+    <p class="mt-6 text-xs text-slate-400">Enable Google Sign-In in your Firebase project settings.</p>
+  </div>`; }
+
+function tmplMainShell() { return `
+  <div id="main-shell" class="h-screen w-full flex flex-col overflow-hidden">
+    <header class="bg-indigo-600 text-white px-4 py-3 flex items-center justify-between shadow-md z-30 shrink-0 select-none">
+      <div class="flex items-center gap-3">
+        <button id="btn-menu" class="p-1.5 hover:bg-indigo-500 rounded-md transition-colors md:hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="flex items-center gap-2">
+          <a href="index.html" class="opacity-70 hover:opacity-100 transition-opacity" title="GA Automations">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+          </a>
+          <div class="text-xl hidden sm:block">📱</div>
+          <div>
+            <h1 class="text-sm md:text-base font-bold leading-tight">Social Media Automation</h1>
+            <p class="text-indigo-200 text-xs hidden sm:block leading-tight">GA Automations Engine</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="user-email" class="text-xs font-medium text-indigo-100 hidden sm:block max-w-[180px] truncate"></span>
+        <button id="btn-logout" class="text-xs font-semibold bg-indigo-700 hover:bg-indigo-800 border border-indigo-500 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden relative">
+      <div id="mobile-backdrop" onclick="closeMobileSidebar()"></div>
+
+      <aside id="sidebar" class="bg-white border-r border-slate-200 flex flex-col shadow-sm shrink-0 z-40 transition-transform duration-300"
+             style="width:${S.sidebarWidth}px">
+        <div class="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+          <h2 class="font-semibold text-slate-700 text-sm">Pipelines</h2>
+          <button id="btn-create" title="New pipeline" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 p-1.5 rounded-md transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+        <div id="workflow-list" class="flex-1 overflow-y-auto p-2 space-y-1.5"></div>
+      </aside>
+
+      <div id="sidebar-resizer" class="hidden md:flex w-1.5 bg-slate-200 hover:bg-indigo-400 cursor-col-resize shrink-0 z-20 transition-colors items-center justify-center group">
+        <div class="h-8 w-0.5 bg-slate-400 group-hover:bg-white rounded-full"></div>
+      </div>
+
+      <section id="main-canvas" class="flex-1 bg-slate-50 flex flex-col min-w-0 h-full relative z-10 overflow-hidden"></section>
+
+      <div id="config-resizer" class="w-1.5 bg-slate-200 hover:bg-indigo-400 cursor-col-resize shrink-0 z-20 transition-colors flex-col justify-center items-center group">
+        <div class="h-8 w-0.5 bg-slate-400 group-hover:bg-white rounded-full"></div>
+      </div>
+
+      <aside id="config-panel" class="bg-white shadow-[-4px_0_20px_rgba(0,0,0,0.06)] border-l border-slate-200 flex-col overflow-hidden shrink-0 z-50"
+             style="width:${S.configWidth}px"></aside>
+    </main>
+  </div>`; }
+
+// ── Section Refreshers ─────────────────────────────────────────────────────────
+
+function refreshUser() {
+  const el = document.getElementById('user-email');
+  if (el) el.textContent = S.user?.email || `User: ${S.user?.uid?.slice(0,8)}`;
+}
+
+function refreshSidebar() {
+  const list = document.getElementById('workflow-list');
+  if (!list) return;
+  if (S.workflows.length === 0) {
+    list.innerHTML = `<div class="text-center p-5 text-slate-400 text-sm mt-2">
+      No pipelines yet.<br>
+      <span class="text-xs">Create one to automate!</span>
+    </div>`;
+    return;
+  }
+  list.innerHTML = S.workflows.map(wf => {
+    const active = S.selectedWorkflow?.id === wf.id;
+    return `<div class="workflow-item relative p-3 rounded-lg border transition-all ${active ? 'border-indigo-500 bg-indigo-50/30 ring-1 ring-indigo-500' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}" data-wf="${wf.id}">
+      <div class="font-medium text-slate-800 text-sm truncate pr-7">${eid(wf.name||'Untitled')}</div>
+      <div class="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span>
+        ${wf.steps?.length||0} step${(wf.steps?.length||0)===1?'':'s'}
+      </div>
+      <button class="delete-wf-btn absolute right-2.5 top-2.5 text-slate-400 hover:text-red-500 transition-all" data-del="${wf.id}" title="Delete">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+      </button>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.workflow-item').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('.delete-wf-btn')) return;
+      const wf = S.workflows.find(w => w.id === el.dataset.wf);
+      if (wf) selectWorkflow(wf);
+    });
+  });
+  list.querySelectorAll('.delete-wf-btn').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); deleteWorkflow(btn.dataset.del); });
+  });
+}
+
+function refreshCanvas() {
+  const canvas = document.getElementById('main-canvas');
+  if (!canvas) return;
+
+  if (!S.isCreating && !S.selectedWorkflow) {
+    canvas.innerHTML = `
+      <div class="h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center">
+        <div class="text-6xl mb-4 opacity-30">🗂</div>
+        <p class="text-lg font-medium text-slate-500">Select or create a pipeline</p>
+        <p class="text-sm text-slate-400 mt-1">Use the sidebar to manage your automation workflows</p>
+      </div>`;
+    return;
+  }
+
+  const hasSteps = S.activeForm.steps.length > 0;
+  canvas.innerHTML = `
+    <div class="w-full h-full flex flex-col p-3 md:p-5 pb-0">
+
+      <!-- Pipeline Header -->
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-3 bg-white p-4 rounded-xl shadow-sm border border-slate-200 shrink-0 gap-3">
+        <div class="flex-1 w-full min-w-0">
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pipeline Name</label>
+          <input id="pipeline-name" type="text" value="${eid(S.activeForm.name)}" placeholder="E.g., Auto AI Social Media Poster"
+                 class="text-lg md:text-xl font-bold bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 outline-none w-full px-0 py-0.5 transition-colors">
+        </div>
+        <div class="flex flex-wrap gap-2 w-full lg:w-auto">
+          ${!hasSteps ? `<button id="btn-template" class="flex-1 lg:flex-none justify-center bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors">
+            <span>📋</span> Load AI Social Template</button>` : ''}
+          <button id="btn-save" ${S.isSaving?'disabled':''} class="flex-1 lg:flex-none justify-center bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            ${S.isSaving ? 'Saving...' : 'Save Pipeline'}
+          </button>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="flex items-center justify-between mb-2 px-1 shrink-0">
+        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Interactive Pipeline Graph</h3>
+        <div class="relative group z-20">
+          <button class="bg-white border-2 border-dashed border-indigo-300 text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-full font-medium text-xs flex items-center gap-1.5 shadow-sm transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Node
+          </button>
+          <div id="add-menu" class="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-30 overflow-hidden py-1">
+            <button class="add-step-btn w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 font-medium transition-colors" data-type="ai_gemini">✨ AI: Gemini Generate</button>
+            <button class="add-step-btn w-full text-left px-4 py-2.5 text-sm hover:bg-pink-50 hover:text-pink-700 flex items-center gap-2 font-medium transition-colors border-t border-slate-50" data-type="instagram">📸 Social: Instagram Post</button>
+            <button class="add-step-btn w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 font-medium transition-colors border-t border-slate-50" data-type="linkedin">💼 Social: LinkedIn Post</button>
+            <button class="add-step-btn w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2 font-medium transition-colors border-t border-slate-50" data-type="log">📝 System: Log Result</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- D3 Canvas -->
+      <div id="d3-container" class="flex-1 w-full bg-[#f8fafc] rounded-t-xl border-x border-t border-slate-300 overflow-hidden relative cursor-grab active:cursor-grabbing">
+        <div class="absolute bottom-3 left-3 text-xs font-semibold text-slate-400 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-slate-200 pointer-events-none hidden sm:block">
+          Scroll to Zoom · Drag to Pan · Click Node to Configure
+        </div>
+        <div id="d3-loading" class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm font-medium">Loading visualization...</div>
+      </div>
+    </div>`;
+
+  document.getElementById('pipeline-name')?.addEventListener('input', e => { S.activeForm.name = e.target.value; });
+  document.getElementById('btn-save')?.addEventListener('click', saveWorkflow);
+  document.getElementById('btn-template')?.addEventListener('click', loadSocialMediaTemplate);
+  document.querySelectorAll('.add-step-btn').forEach(btn => btn.addEventListener('click', () => addStep(btn.dataset.type)));
+
+  if (S.d3Available) {
+    setTimeout(() => renderTree(true), 60);
+  } else {
+    loadD3().then(() => { S.d3Available = true; renderTree(true); });
+  }
+}
+
+// ─── Config Panel ─────────────────────────────────────────────────────────────
+
+function refreshConfigPanel() {
+  const panel   = document.getElementById('config-panel');
+  const resizer = document.getElementById('config-resizer');
+  if (!panel || !resizer) return;
+
+  if (!S.editingStep) {
+    panel.classList.remove('open');
+    resizer.classList.remove('open');
+    triggerD3Resize();
+    return;
+  }
+
+  panel.classList.add('open');
+  if (!S.isMobile) resizer.classList.add('open');
+
+  const step   = S.editingStep;
+  const type   = S.editingType;
+  const color  = type === 'trigger' ? '#4f46e5' : gc(step.type);
+  const label  = type === 'trigger' ? 'PIPELINE START' : (step.type||'').replace('_',' ').toUpperCase();
+  const title  = type === 'trigger' ? 'Configure Trigger' : `Configure: ${step.name||'Node'}`;
+
+  const isMob  = S.isMobile;
+  panel.style.width = isMob ? '100%' : `${S.configWidth}px`;
+  if (isMob) { panel.style.position = 'fixed'; panel.style.inset = '60px 0 0 0'; panel.style.zIndex = '100'; }
+  else        { panel.style.position = 'relative'; panel.style.inset = 'auto'; }
+
+  panel.innerHTML = `
+    <div class="px-4 md:px-5 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50 shrink-0">
+      <button id="btn-close-config" class="p-2 bg-white rounded-full border border-slate-200 shadow-sm hover:bg-slate-100 text-slate-500 transition-colors shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="min-w-0">
+        <h2 class="text-sm md:text-base font-bold text-slate-800 truncate">${eid(title)}</h2>
+        <p class="text-[10px] uppercase tracking-wider font-bold mt-0.5" style="color:${color}">${label}</p>
+      </div>
+    </div>
+
+    <div id="config-body" class="flex-1 overflow-y-auto p-4 md:p-5 bg-white space-y-5">
+      ${type === 'step' ? `
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Node Name</label>
+        <input id="cfg-name" type="text" value="${eid(step.name||'')}" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-slate-50">
+      </div>` : ''}
+      ${renderConfigBody(step, type)}
+    </div>
+
+    <div class="px-4 md:px-5 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+      ${type === 'step'
+        ? `<button id="btn-del-step" class="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <span class="hidden sm:inline">Delete Node</span>
+           </button>`
+        : '<div></div>'}
+      <button id="btn-save-config" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Config
+      </button>
+    </div>`;
+
+  // Bind close / save / delete
+  document.getElementById('btn-close-config')?.addEventListener('click', closeStepConfig);
+  document.getElementById('btn-save-config')?.addEventListener('click', saveAndCloseConfig);
+  document.getElementById('btn-del-step')?.addEventListener('click', deleteCurrentStep);
+
+  // Bind name field
+  document.getElementById('cfg-name')?.addEventListener('input', e => { S.editingStep.name = e.target.value; });
+
+  bindConfigFields(step, type);
+  triggerD3Resize();
+}
+
+function renderConfigBody(step, type) {
+  if (type === 'trigger') return renderTriggerConfig(step);
+  if (type === 'step')    return renderStepConfig(step);
+  return '';
+}
+
+function renderTriggerConfig(trigger) {
+  const isWh = trigger.type !== 'schedule';
+  return `
+    <div>
+      <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">Trigger Type</h3>
+      <div class="flex gap-3 mb-4">
+        <label class="flex-1 flex items-center gap-2.5 p-3 border rounded-xl cursor-pointer transition-all ${isWh ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : 'border-slate-200 hover:bg-slate-50'}">
+          <input type="radio" name="trig-type" value="webhook" ${isWh?'checked':''} class="w-4 h-4 text-indigo-600 accent-indigo-600">
+          <div><div class="font-bold text-xs text-slate-800">Webhook</div><div class="text-[10px] text-slate-500">Run on external event</div></div>
+        </label>
+        <label class="flex-1 flex items-center gap-2.5 p-3 border rounded-xl cursor-pointer transition-all ${!isWh ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : 'border-slate-200 hover:bg-slate-50'}">
+          <input type="radio" name="trig-type" value="schedule" ${!isWh?'checked':''} class="w-4 h-4 text-indigo-600 accent-indigo-600">
+          <div><div class="font-bold text-xs text-slate-800">Schedule</div><div class="text-[10px] text-slate-500">Run on cron timer</div></div>
+        </label>
+      </div>
+      <div id="trig-webhook-section" class="${isWh?'':'hidden'}">
+        <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
+          <p class="text-xs text-indigo-800 font-medium mb-2">POST JSON payloads to this URL to trigger the pipeline:</p>
+          <div class="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-indigo-200">
+            <code id="webhook-url-code" class="text-xs font-mono text-pink-600 flex-1 overflow-x-auto whitespace-nowrap select-all">${eid(getWebhookUrl())}</code>
+            <button onclick="copyWebhookUrl()" class="shrink-0 text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-200 transition-colors">Copy</button>
+          </div>
+          <p class="text-[10px] text-indigo-600 mt-2">Save the pipeline first to get the final webhook URL.</p>
+        </div>
+      </div>
+      <div id="trig-schedule-section" class="${!isWh?'':'hidden'} space-y-2">
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Cron Expression</label>
+        <input id="cron-input" type="text" value="${eid(trigger.schedule||'')}" placeholder="0 9 * * *" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+        <p class="text-xs text-slate-500">E.g., <code class="bg-slate-100 px-1 rounded font-mono">0 9 * * *</code> = every day at 9 AM UTC</p>
+      </div>
+    </div>`;
+}
+
+function renderStepConfig(step) {
+  const t = step.type;
+  const c = step.config || {};
+
+  if (t === 'ai_gemini') return `
+    <div>
+      <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">AI Generation Rules</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">System Prompt (Niche / Brand Voice)</label>
+          <textarea id="cfg-sysPrompt" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-purple-50/30 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none">${eid(c.systemPrompt||'')}</textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">User Prompt (Content Idea)</label>
+          <textarea id="cfg-userPrompt" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none">${eid(c.userPrompt||'')}</textarea>
+        </div>
+        <div class="bg-purple-50 border border-purple-100 p-3 rounded-lg">
+          <p class="text-xs font-semibold text-purple-800 mb-1">Backend returns structured JSON:</p>
+          <code class="block text-[11px] font-mono text-purple-700 bg-white p-2 rounded border border-purple-200 overflow-x-auto">{ "text": "…", "image_url": "…", "is_scheduled_content": bool, "scheduled_time": "ISO" }</code>
+          <p class="text-[10px] text-purple-600 mt-1">Use <code class="font-mono bg-white px-1 rounded border">{{step_${step.id}.text}}</code> in later steps.</p>
+        </div>
+        <label class="flex items-start gap-2.5 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer">
+          <input id="cfg-enableDelay" type="checkbox" ${c.enableDelay?'checked':''} class="mt-0.5 w-4 h-4 text-purple-600 accent-purple-600 shrink-0">
+          <div>
+            <div class="text-xs font-bold text-slate-700">Enable Smart Delay</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Pause pipeline until <code class="font-mono bg-white px-1 rounded">scheduled_time</code> if AI sets <code class="font-mono bg-white px-1 rounded">is_scheduled_content=true</code></div>
+          </div>
+        </label>
+      </div>
+    </div>`;
+
+  if (t === 'instagram') return `
+    <div>
+      <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">Instagram API Setup</h3>
+      <div class="grid grid-cols-1 gap-3 mb-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Instagram Account ID</label>
+          <input id="cfg-accountId" type="text" value="${eid(c.accountId||'')}" placeholder="17841xxxxxxxx" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Meta Access Token</label>
+          <input id="cfg-token" type="password" value="${eid(c.token||'')}" placeholder="EAAB…" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none">
+        </div>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Image URL <span class="text-slate-400 font-normal">(supports <code class="font-mono text-pink-600">{{step_ID.image_url}}</code>)</span></label>
+          <input id="cfg-imageUrl" type="text" value="${eid(c.imageUrl||'')}" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono text-pink-600 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Caption <span class="text-slate-400 font-normal">(supports <code class="font-mono text-pink-600">{{step_ID.text}}</code>)</span></label>
+          <textarea id="cfg-caption" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono text-pink-600 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none resize-none bg-slate-50">${eid(c.caption||'')}</textarea>
+        </div>
+      </div>
+    </div>`;
+
+  if (t === 'linkedin') return `
+    <div>
+      <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">LinkedIn API Setup</h3>
+      <div class="grid grid-cols-1 gap-3 mb-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Author URN</label>
+          <input id="cfg-authorUrn" type="text" value="${eid(c.authorUrn||'')}" placeholder="urn:li:person:12345" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">LinkedIn Access Token</label>
+          <input id="cfg-token" type="password" value="${eid(c.token||'')}" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Post Text <span class="text-slate-400 font-normal">(supports <code class="font-mono text-blue-600">{{step_ID.text}}</code>)</span></label>
+          <textarea id="cfg-text" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono text-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none bg-slate-50">${eid(c.text||'')}</textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Media URL <span class="text-slate-400 font-normal">(supports <code class="font-mono text-blue-600">{{step_ID.image_url}}</code>)</span></label>
+          <input id="cfg-mediaUrl" type="text" value="${eid(c.mediaUrl||'')}" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono text-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+      </div>
+    </div>`;
+
+  if (t === 'log') return `
+    <div>
+      <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">Log Configuration</h3>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Log Message <span class="text-slate-400 font-normal">(supports <code class="font-mono text-emerald-600">{{step_ID.field}}</code>)</span></label>
+        <textarea id="cfg-message" rows="4" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono text-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none bg-slate-50">${eid(c.message||'')}</textarea>
+        <p class="text-[10px] text-slate-400 mt-1.5">This message is written to the pipeline's Firestore log collection on success.</p>
+      </div>
+    </div>`;
+
+  return `<p class="text-sm text-slate-400 italic">No configuration available for this step type.</p>`;
+}
+
+function bindConfigFields(step, type) {
+  if (type === 'trigger') {
+    // Radio buttons — re-render trigger section on change
+    document.querySelectorAll('input[name="trig-type"]').forEach(radio => {
+      radio.addEventListener('change', e => {
+        S.activeForm.trigger.type = e.target.value;
+        S.editingStep.type = e.target.value;
+        const wh = e.target.value === 'webhook';
+        document.getElementById('trig-webhook-section')?.classList.toggle('hidden', !wh);
+        document.getElementById('trig-schedule-section')?.classList.toggle('hidden', wh);
+        // Update radio label styles
+        document.querySelectorAll('input[name="trig-type"]').forEach(r => {
+          r.closest('label').className = `flex-1 flex items-center gap-2.5 p-3 border rounded-xl cursor-pointer transition-all ${r.checked ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : 'border-slate-200 hover:bg-slate-50'}`;
+        });
+      });
+    });
+    document.getElementById('cron-input')?.addEventListener('input', e => { S.editingStep.schedule = e.target.value; S.activeForm.trigger.schedule = e.target.value; });
+    return;
+  }
+
+  // Step fields
+  const t = step.type;
+  const cfg = step.config;
+  const bind = (id, key) => document.getElementById(id)?.addEventListener('input', e => { cfg[key] = e.target.value; });
+  const bindChk = (id, key) => document.getElementById(id)?.addEventListener('change', e => { cfg[key] = e.target.checked; });
+
+  if (t === 'ai_gemini') { bind('cfg-sysPrompt','systemPrompt'); bind('cfg-userPrompt','userPrompt'); bindChk('cfg-enableDelay','enableDelay'); }
+  if (t === 'instagram') { bind('cfg-accountId','accountId'); bind('cfg-token','token'); bind('cfg-imageUrl','imageUrl'); bind('cfg-caption','caption'); }
+  if (t === 'linkedin')  { bind('cfg-authorUrn','authorUrn'); bind('cfg-token','token'); bind('cfg-text','text'); bind('cfg-mediaUrl','mediaUrl'); }
+  if (t === 'log')       { bind('cfg-message','message'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  D3 VISUALIZATION ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function loadD3() {
+  if (window.d3) return Promise.resolve(window.d3);
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://d3js.org/d3.v7.min.js';
+    s.onload = () => res(window.d3);
+    s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+function renderTree(resetZoom = false) {
+  if (!S.d3Available) return;
+  const container = document.getElementById('d3-container');
+  if (!container) return;
+
+  const d3 = window.d3;
+  d3.select(container).selectAll('svg').remove();
+  document.getElementById('d3-loading')?.remove();
+
+  const W = container.clientWidth  || 600;
+  const H = container.clientHeight || 400;
+
+  // Build linear chain: Trigger → Step[0] → Step[1] → …
+  const rootData = {
+    id: 'trigger-node', name: 'Trigger Event', type: 'trigger',
+    rawData: S.activeForm.trigger, children: []
+  };
+  let cur = rootData;
+  for (const step of S.activeForm.steps) {
+    const node = { id: step.id, name: step.name, type: step.type, rawData: step, children: [] };
+    cur.children.push(node);
+    cur = node;
+  }
+
+  const svg = d3.select(container).append('svg').attr('width','100%').attr('height','100%');
+  const g   = svg.append('g');
+
+  const zoom = d3.zoom().scaleExtent([0.25, 3])
+    .on('zoom', ev => g.attr('transform', ev.transform));
+  svg.call(zoom);
+
+  const tree = d3.tree().nodeSize([260, 130]);
+  const root = d3.hierarchy(rootData);
+  tree(root);
+
+  if (resetZoom) {
+    const initT = d3.zoomIdentity.translate(W / 2, 60).scale(S.isMobile ? 0.75 : 1);
+    svg.call(zoom.transform, initT);
+  }
+
+  // Links
+  g.selectAll('.link')
+    .data(root.links()).enter().append('path')
+    .attr('fill','none').attr('stroke','#cbd5e1').attr('stroke-width', 2.5)
+    .attr('d', d3.linkVertical().x(d => d.x).y(d => d.y));
+
+  const NW = 230, NH = 66;
+
+  // Nodes
+  const node = g.selectAll('.node')
+    .data(root.descendants()).enter().append('g')
+    .attr('class','node')
+    .attr('transform', d => `translate(${d.x},${d.y})`)
+    .style('cursor','pointer')
+    .on('mouseover', (ev, d) => {
+      d3.select(ev.currentTarget).select('.node-box')
+        .attr('fill','#f8fafc').attr('stroke-width', 3);
+    })
+    .on('mouseout', (ev, d) => {
+      // BUG FIX: Use d.data from outer closure instead of incorrect (dNode) callback
+      const isSel = (S.editingType==='trigger' && d.data.type==='trigger') ||
+                    (S.editingType==='step'    && S.editingStep?.id === d.data.id);
+      d3.select(ev.currentTarget).select('.node-box')
+        .attr('fill','#ffffff')
+        .attr('stroke-width', isSel ? 3 : 2)
+        .attr('stroke', isSel ? '#f59e0b' : gc(d.data.type));
+    })
+    .on('click', (ev, d) => { ev.stopPropagation(); openStepConfig(d.data); });
+
+  // Node rect
+  node.append('rect').attr('class','node-box')
+    .attr('x',-NW/2).attr('y',-NH/2).attr('width',NW).attr('height',NH).attr('rx',12)
+    .attr('fill','#ffffff')
+    .attr('stroke', d => {
+      const isSel = (S.editingType==='trigger' && d.data.type==='trigger') ||
+                    (S.editingType==='step'    && S.editingStep?.id===d.data.id);
+      return isSel ? '#f59e0b' : gc(d.data.type);
+    })
+    .attr('stroke-width', d => {
+      const isSel = (S.editingType==='trigger' && d.data.type==='trigger') ||
+                    (S.editingType==='step'    && S.editingStep?.id===d.data.id);
+      return isSel ? 3 : 2;
+    })
+    .style('filter','drop-shadow(0 2px 6px rgba(0,0,0,0.07))');
+
+  // Color circle
+  node.append('circle').attr('cx',-NW/2+28).attr('cy',0).attr('r',17)
+    .attr('fill', d => gc(d.data.type));
+
+  // Icon inside circle
+  node.append('text').attr('x',-NW/2+28).attr('y',5).attr('text-anchor','middle')
+    .text(d => gi(d.data.type))
+    .style('font-size','13px').style('fill','#ffffff');
+
+  // Node title
+  node.append('text').attr('x',-NW/2+56).attr('y',-5)
+    .text(d => d.data.name.length > 22 ? d.data.name.slice(0,21)+'…' : d.data.name)
+    .style('font-size','13px').style('font-weight','700').style('fill','#1e293b');
+
+  // Node type label
+  node.append('text').attr('x',-NW/2+56).attr('y',14)
+    .text(d => d.data.type.replace('_',' ').toUpperCase())
+    .style('font-size','9px').style('font-weight','800').style('letter-spacing','0.05em')
+    .style('fill', d => gc(d.data.type));
+
+  // Gear icon
+  node.append('text').attr('x',NW/2-18).attr('y',5)
+    .text('⚙️').style('font-size','13px').style('opacity','0.4');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  WORKFLOW ACTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function startCreate() {
+  S.selectedWorkflow = null;
+  S.isCreating       = true;
+  S.activeForm       = { name:'New Empty Pipeline', trigger:{ type:'webhook', schedule:'' }, steps:[] };
+  closeStepConfig(false);
+  if (S.isMobile) closeMobileSidebar();
+  refreshCanvas();
+}
+
+function selectWorkflow(wf) {
+  S.isCreating       = false;
+  S.selectedWorkflow = wf;
+  S.activeForm       = {
+    name:    wf.name    || '',
+    trigger: wf.trigger || { type:'webhook', schedule:'' },
+    steps:   JSON.parse(JSON.stringify(wf.steps || []))  // deep copy
+  };
+  closeStepConfig(false);
+  if (S.isMobile) closeMobileSidebar();
+  refreshSidebar();
+  refreshCanvas();
+}
+
+async function saveWorkflow() {
+  if (!S.user) return;
+  S.isSaving = true;
+  const saveBtn = document.getElementById('btn-save');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+
+  try {
+    const data = {
+      name:      S.activeForm.name,
+      trigger:   S.activeForm.trigger,
+      steps:     S.activeForm.steps,
+      updatedAt: new Date().toISOString()
+    };
+    if (S.isCreating) {
+      const ref    = collection(db, 'artifacts', APP_ID, 'users', S.user.uid, 'workflows');
+      const docRef = await addDoc(ref, { ...data, createdAt: new Date().toISOString() });
+      S.selectedWorkflow = { id: docRef.id, ...data };
+      S.isCreating = false;
+      // Update webhook URL display if config panel is open showing trigger
+      const wuEl = document.getElementById('webhook-url-code');
+      if (wuEl) wuEl.textContent = getWebhookUrl();
+    } else if (S.selectedWorkflow) {
+      await updateDoc(doc(db,'artifacts',APP_ID,'users',S.user.uid,'workflows',S.selectedWorkflow.id), data);
+      S.selectedWorkflow = { ...S.selectedWorkflow, ...data };
+    }
+  } catch (err) {
+    console.error('Save failed:', err);
+    alert('Failed to save. Check your Firebase Firestore rules and connection.');
+  } finally {
+    S.isSaving = false;
+    const btn = document.getElementById('btn-save');
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Save Pipeline'; }
+  }
+}
+
+async function deleteWorkflow(id) {
+  if (!S.user || !confirm('Delete this pipeline permanently?')) return;
+  try {
+    await deleteDoc(doc(db,'artifacts',APP_ID,'users',S.user.uid,'workflows',id));
+    if (S.selectedWorkflow?.id === id) {
+      S.selectedWorkflow = null; S.isCreating = false;
+      S.activeForm = { name:'', trigger:{ type:'webhook', schedule:'' }, steps:[] };
+      closeStepConfig(false);
+      refreshCanvas();
+    }
+  } catch (err) { console.error('Delete failed:', err); }
+}
+
+function addStep(type) {
+  const def  = STEP_DEFAULTS[type] || { name: type, config:{} };
+  const step = { id: gid(), type, name: def.name, config: JSON.parse(JSON.stringify(def.config)) };
+  S.activeForm.steps.push(step);
+  openStepConfig({ type: 'step-item', rawData: step });
+  setTimeout(() => renderTree(false), 60);
+}
+
+function openStepConfig(nodeData) {
+  if (nodeData.type === 'trigger') {
+    S.editingType = 'trigger';
+    S.editingStep = S.activeForm.trigger;
+  } else {
+    S.editingType = 'step';
+    S.editingStep = nodeData.rawData;
+  }
+  refreshConfigPanel();
+  setTimeout(() => renderTree(false), 60);
+}
+
+function closeStepConfig(rerender = true) {
+  S.editingStep = null; S.editingType = null;
+  refreshConfigPanel();
+  if (rerender) setTimeout(() => renderTree(false), 60);
+}
+
+function saveAndCloseConfig() {
+  saveWorkflow();
+  closeStepConfig();
+}
+
+function deleteCurrentStep() {
+  if (S.editingType !== 'step' || !S.editingStep) return;
+  const idx = S.activeForm.steps.findIndex(s => s.id === S.editingStep.id);
+  if (idx !== -1) S.activeForm.steps.splice(idx, 1);
+  closeStepConfig();
+  setTimeout(() => renderTree(true), 60);
+}
+
+// BUG FIX: | truncate pipe doesn't exist in Angular. Template string is stored as-is.
+function loadSocialMediaTemplate() {
+  const s1 = gid();
+  S.activeForm = {
+    name: 'Automated AI Social Media Poster',
+    trigger: { type: 'schedule', schedule: '0 9 * * *' },
+    steps: [
+      { id: s1, type:'ai_gemini', name:'Gemini: Generate Content', config:{
+          systemPrompt:'You are an expert social media manager for a SaaS company. Output engaging, professional content for both Instagram and LinkedIn. Include relevant emojis and hashtags.',
+          userPrompt:'Generate a post about the future of AI in workflow automation. If the ideal post time is in the future, set is_scheduled_content to true with scheduled_time.',
+          enableDelay: true
+      }},
+      { id: gid(), type:'instagram', name:'Instagram: Publish Photo', config:{
+          accountId:'', token:'',
+          imageUrl:`{{step_${s1}.image_url}}`,
+          caption:`{{step_${s1}.text}}`
+      }},
+      { id: gid(), type:'linkedin', name:'LinkedIn: Publish Post', config:{
+          authorUrn:'', token:'',
+          mediaUrl:`{{step_${s1}.image_url}}`,
+          text:`{{step_${s1}.text}}`
+      }},
+      { id: gid(), type:'log', name:'System: Log Success', config:{
+          message:`Pipeline complete. Content: {{step_${s1}.text}}`
+      }}
+    ]
+  };
+  closeStepConfig(false);
+  setTimeout(() => renderTree(true), 60);
+}
+
+function copyWebhookUrl() {
+  const url = getWebhookUrl();
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.querySelector('#trig-webhook-section button');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
+  });
+}
+window.copyWebhookUrl = copyWebhookUrl;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function bindLoginEvents() {
+  document.getElementById('btn-google')?.addEventListener('click', loginWithGoogle);
+}
+
+async function loginWithGoogle() {
+  try {
+    S.isAuthLoading = true; renderApp();
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch(e) {
+    console.error('Sign-in error:', e);
+    S.isAuthLoading = false;
+    alert('Google sign-in failed. Ensure Google provider is enabled in Firebase Auth settings.');
+    renderApp();
+  }
+}
+
+async function doLogout() {
+  try {
+    S.isAuthLoading = true; S.mainInjected = false; S.selectedWorkflow = null; S.isCreating = false;
+    await signOut(auth);
+  } catch(e) { console.error('Logout error:', e); S.isAuthLoading = false; renderApp(); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  FIRESTORE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function fetchWorkflows(uid) {
+  if (S.dataUnsubscribe) S.dataUnsubscribe();
+  const ref = collection(db, 'artifacts', APP_ID, 'users', uid, 'workflows');
+  S.dataUnsubscribe = onSnapshot(ref, snap => {
+    S.workflows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    refreshSidebar();
+    if (S.selectedWorkflow) {
+      const updated = S.workflows.find(w => w.id === S.selectedWorkflow.id);
+      if (updated && !S.editingStep) { /* sync only if not actively editing */ }
+    }
+  }, err => console.error('Firestore error:', err));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  GLOBAL EVENT BINDINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function bindGlobalEvents() {
+  document.getElementById('btn-menu')?.addEventListener('click', () => {
+    S.showSidebar = !S.showSidebar;
+    const sb = document.getElementById('sidebar');
+    const mb = document.getElementById('mobile-backdrop');
+    if (sb) sb.style.transform = S.showSidebar ? 'translateX(0)' : 'translateX(-100%)';
+    if (mb) mb.classList.toggle('show', S.showSidebar);
+  });
+  document.getElementById('btn-logout')?.addEventListener('click', doLogout);
+  document.getElementById('btn-create')?.addEventListener('click', startCreate);
+
+  // Sidebar resize (desktop)
+  document.getElementById('sidebar-resizer')?.addEventListener('mousedown', e => {
+    e.preventDefault(); S.isResizingSidebar = true; document.body.classList.add('resizing','resizing-h');
+  });
+
+  // Config resize (desktop)
+  document.getElementById('config-resizer')?.addEventListener('mousedown', e => {
+    e.preventDefault(); S.isResizingConfig = true; document.body.classList.add('resizing','resizing-h');
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (S.isResizingSidebar) {
+      S.sidebarWidth = Math.max(200, Math.min(e.clientX, 480));
+      const sb = document.getElementById('sidebar');
+      if (sb) sb.style.width = S.sidebarWidth + 'px';
+      triggerD3Resize();
+    }
+    if (S.isResizingConfig) {
+      S.configWidth = Math.max(300, Math.min(window.innerWidth - e.clientX, 700));
+      const cp = document.getElementById('config-panel');
+      if (cp) cp.style.width = S.configWidth + 'px';
+      triggerD3Resize();
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (S.isResizingSidebar || S.isResizingConfig) {
+      S.isResizingSidebar = false; S.isResizingConfig = false;
+      document.body.classList.remove('resizing','resizing-h');
+      triggerD3Resize();
+    }
+  });
+
+  // Mobile sidebar handling
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar && S.isMobile) {
+    sidebar.style.position = 'fixed';
+    sidebar.style.top = '56px';
+    sidebar.style.bottom = '0';
+    sidebar.style.left = '0';
+    sidebar.style.width = '280px';
+    sidebar.style.transform = 'translateX(-100%)';
+    sidebar.style.zIndex = '100';
+  }
+}
+
+function closeMobileSidebar() {
+  S.showSidebar = false;
+  const sb = document.getElementById('sidebar');
+  const mb = document.getElementById('mobile-backdrop');
+  if (sb) sb.style.transform = 'translateX(-100%)';
+  if (mb) mb.classList.remove('show');
+}
+window.closeMobileSidebar = closeMobileSidebar;
+
+function triggerD3Resize() {
+  clearTimeout(S.d3ResizeTimer);
+  S.d3ResizeTimer = setTimeout(() => {
+    if (S.d3Available && (S.selectedWorkflow || S.isCreating)) renderTree(false);
+  }, 30);
+}
+
+window.addEventListener('resize', () => {
+  const wasMobile = S.isMobile;
+  S.isMobile = window.innerWidth < 768;
+  if (wasMobile !== S.isMobile) { S.mainInjected = false; renderApp(); return; }
+  triggerD3Resize();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  BOOTSTRAP — Auth listener starts everything
+// ═══════════════════════════════════════════════════════════════════════════════
+
+onAuthStateChanged(auth, user => {
+  S.user         = user;
+  S.isAuthLoading = false;
+
+  if (user) {
+    fetchWorkflows(user.uid);
+    if (!S.d3Available) {
+      loadD3().then(() => {
+        S.d3Available = true;
+        if (S.selectedWorkflow || S.isCreating) setTimeout(() => renderTree(true), 100);
+      }).catch(e => console.error('D3 load failed:', e));
+    }
+  } else {
+    if (S.dataUnsubscribe) { S.dataUnsubscribe(); S.dataUnsubscribe = null; }
+    S.workflows = []; S.mainInjected = false;
+  }
+
+  renderApp();
+});
+
+</script>
+</body>
+</html>

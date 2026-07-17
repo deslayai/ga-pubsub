@@ -1,0 +1,61 @@
+{
+  "name": "ga-pubsub-core",
+  "version": "1.0.0",
+  "description": "GA-PubSub Core \u2014 free pub/sub event bus for TypeScript (Elastic License 2.0)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc && node scripts/build-cjs.mjs",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test",
+    "pack": "npm run build && npm pack"
+  },
+  "sideEffects": false,
+  "keywords": [
+    "pubsub",
+    "event-bus",
+    "events",
+    "messaging",
+    "typescript",
+    "browser",
+    "node",
+    "edge",
+    "serverless",
+    "wildcard",
+    "middleware",
+    "schema-validation",
+    "replay"
+  ],
+  "author": "Ajithraj G",
+  "license": "Elastic-2.0",
+  "peerDependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ga-pubsub/ga-pubsub.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://deslay-ai.web.app/ga-pubsub",
+  "bugs": {
+    "url": "https://deslay-ai.web.app/community"
+  }
+}

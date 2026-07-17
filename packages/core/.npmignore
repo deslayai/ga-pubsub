@@ -1,0 +1,28 @@
+# Source files — only dist/ is published
+src/
+*.ts
+!*.d.ts
+
+# Tests
+*.test.ts
+*.spec.ts
+__tests__/
+tests/
+
+# Config
+tsconfig*.json
+vitest.config.ts
+.eslintrc.*
+
+# Development artifacts
+*.map
+*.tsbuildinfo
+node_modules/
+coverage/
+
+# CI
+.github/
+
+# OS
+.DS_Store
+Thumbs.db

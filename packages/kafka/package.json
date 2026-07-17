@@ -1,0 +1,26 @@
+{
+  "name": "@ga-pubsub/kafka",
+  "version": "1.0.0",
+  "description": "Apache Kafka transport adapter for GA-PubSub — consumer groups, exactly-once, partition-aware",
+  "type": "module",
+  "main":  "./dist/index.js",
+  "module":"./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import":  "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types":   "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": { "build": "tsc", "dev": "tsc --watch" },
+  "peerDependencies": {
+    "ga-pubsub": "^1.0.0",
+    "kafkajs":   "^2.0.0"
+  },
+  "peerDependenciesMeta": { "kafkajs": { "optional": false } },
+  "devDependencies": { "kafkajs": "^2.0.0", "@types/node": "^20.0.0" },
+  "keywords": ["ga-pubsub", "kafka", "kafkajs", "streaming", "transport"],
+  "license": "MIT"
+}

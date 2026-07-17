@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GA-PubSub Pro — Documentation</title>
+<style>
+  :root {
+    --bg: #0a0c14;
+    --surface: #10131c;
+    --surface2: #161926;
+    --border: #222638;
+    --accent: #a78bfa;
+    --accent2: #fb923c;
+    --green: #4ade80;
+    --text: #e2e6f0;
+    --muted: #7c85a2;
+    --code-bg: #0d0f1a;
+    --sidebar-w: 268px;
+    --header-h: 56px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.7; }
+
+  /* ── Header ── */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px; gap: 14px; z-index: 100;
+  }
+  header .logo { font-size: 17px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+  header .badge-pro {
+    font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 700;
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    color: #fff; letter-spacing: .3px;
+  }
+  header nav { margin-left: auto; display: flex; gap: 24px; align-items: center; }
+  header nav a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; }
+  header nav a:hover { color: var(--text); }
+  header nav .buy {
+    padding: 7px 18px; border-radius: 6px; font-weight: 700; font-size: 13px;
+    background: linear-gradient(135deg, #7c3aed, #a78bfa); color: #fff;
+  }
+
+  /* ── Layout ── */
+  .layout { display: flex; margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); }
+
+  /* ── Sidebar ── */
+  aside {
+    width: var(--sidebar-w); flex-shrink: 0;
+    background: var(--surface); border-right: 1px solid var(--border);
+    position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h));
+    overflow-y: auto; padding: 24px 0;
+  }
+  .nav-group { margin-bottom: 24px; }
+  .nav-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    color: var(--muted); text-transform: uppercase; padding: 0 20px 8px;
+  }
+  aside a {
+    display: block; padding: 7px 20px; color: var(--muted);
+    text-decoration: none; font-size: 14px; transition: all .15s;
+    border-left: 2px solid transparent;
+  }
+  aside a:hover { color: var(--text); background: var(--surface2); }
+  aside a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(167,139,250,.07); }
+
+  /* ── Main ── */
+  main { flex: 1; min-width: 0; padding: 48px 64px 96px; max-width: 920px; }
+
+  /* ── Typography ── */
+  h1 { font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px;
+       background: linear-gradient(135deg, #fff 30%, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { font-size: 24px; font-weight: 700; margin: 52px 0 16px; padding-top: 16px;
+       border-top: 1px solid var(--border); color: #fff; }
+  h3 { font-size: 17px; font-weight: 600; margin: 32px 0 10px; color: var(--accent); }
+  p  { margin-bottom: 16px; color: var(--text); }
+  ul, ol { padding-left: 20px; margin-bottom: 16px; }
+  li { margin-bottom: 6px; }
+  a  { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { color: #fff; }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(135deg, rgba(124,58,237,.12), rgba(167,139,250,.06));
+    border: 1px solid rgba(167,139,250,.25); border-radius: 12px;
+    padding: 32px 36px; margin-bottom: 40px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: 'PRO'; position: absolute; right: -12px; top: -12px;
+    font-size: 120px; font-weight: 900; color: rgba(167,139,250,.04);
+    line-height: 1; pointer-events: none;
+  }
+  .hero p { margin: 8px 0 20px; color: var(--muted); font-size: 16px; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge-img { height: 20px; }
+
+  /* ── Code ── */
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 20px 24px; overflow-x: auto; margin: 16px 0 24px;
+    font-size: 13.5px; line-height: 1.6;
+  }
+  code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; }
+  p code, li code, td code {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 6px; font-size: 13px; color: #c9d1d9;
+  }
+  .kw  { color: #c792ea; }
+  .fn  { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cm  { color: #546e7a; font-style: italic; }
+  .num { color: #f78c6c; }
+  .cls { color: #ffcb6b; }
+  .err { color: #ff5370; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: 16px 0 28px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: var(--surface2); color: var(--muted); font-weight: 600;
+       text-align: left; padding: 10px 16px; border: 1px solid var(--border); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  td { padding: 10px 16px; border: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+  /* ── Callouts ── */
+  .callout {
+    border-left: 3px solid var(--accent); background: rgba(167,139,250,.07);
+    border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 20px 0;
+  }
+  .callout.warn { border-color: #f0b429; background: rgba(240,180,41,.07); }
+  .callout.danger { border-color: #ff5370; background: rgba(255,83,112,.07); }
+  .callout.tip { border-color: var(--green); background: rgba(74,222,128,.07); }
+  .callout p { margin: 0; font-size: 14px; }
+  .callout strong { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+
+  /* ── Feature grid ── */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+  }
+  .card h4 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+  .card p { font-size: 13px; color: var(--muted); margin: 0; }
+  .card .icon { font-size: 22px; margin-bottom: 10px; }
+
+  /* ── Comparison table ── */
+  .check { color: var(--green); font-size: 16px; }
+  .cross { color: var(--muted); }
+
+  /* ── Error block ── */
+  .error-block {
+    background: rgba(255,83,112,.06); border: 1px solid rgba(255,83,112,.2);
+    border-radius: 8px; padding: 16px 20px; margin: 20px 0;
+  }
+  .error-block .code-label { font-size: 12px; color: #ff5370; font-weight: 700;
+    letter-spacing: .5px; text-transform: uppercase; margin-bottom: 8px; }
+  .error-block p { margin: 0 0 8px; font-size: 14px; }
+  .error-block p:last-child { margin: 0; }
+
+  footer {
+    text-align: center; padding: 32px; color: var(--muted);
+    font-size: 13px; border-top: 1px solid var(--border); margin-top: 48px;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <span class="logo">GA-PubSub</span>
+  <span class="badge-pro">PRO</span>
+  <nav>
+    <a href="docs-core.html">Core Docs</a>
+    <a href="https://deslay-ai.web.app/ga-pubsub">Website</a>
+    <a href="https://deslay-ai.web.app/ga-pubsub-pro/queries">Support</a>
+    <a href="https://deslay-ai.web.app/ga-pubsub-pro" class="buy">Get PRO →</a>
+  </nav>
+</header>
+
+<div class="layout">
+
+<!-- ── Sidebar ── -->
+<aside>
+  <div class="nav-group">
+    <div class="nav-label">Getting Started</div>
+    <a href="#introduction" class="active">Introduction</a>
+    <a href="#installation">Installation</a>
+    <a href="#upgrade">Drop-in Upgrade</a>
+    <a href="#license-key">License Key Setup</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Security</div>
+    <a href="#hmac">HMAC Signing</a>
+    <a href="#rate-limit">Rate Limiting</a>
+    <a href="#authorization">Authorization</a>
+    <a href="#replay-prevention">Replay Prevention</a>
+    <a href="#payload-size">Payload Size</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Architecture</div>
+    <a href="#multi-tenant">Multi-Tenancy</a>
+    <a href="#scoped-bus">Scoped Bus</a>
+    <a href="#transport">Transport Adapters</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Reference</div>
+    <a href="#pro-options">ProBusOptions</a>
+    <a href="#api">API Reference</a>
+    <a href="#errors">Error Classes</a>
+    <a href="#key-errors">License Key Errors</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">More</div>
+    <a href="#license">License</a>
+    <a href="#support">Support</a>
+  </div>
+</aside>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>GA-PubSub Pro</h1>
+    <p>Enterprise pub/sub — HMAC signing, rate limiting, authorization,<br>
+       replay-attack prevention, multi-tenancy, and transport adapters.</p>
+    <div class="badges">
+      <img class="badge-img" src="https://img.shields.io/badge/License-Commercial-a78bfa.svg" alt="Commercial" />
+      <img class="badge-img" src="https://img.shields.io/badge/TypeScript-5.x-3178c6.svg?logo=typescript&logoColor=white" alt="TypeScript" />
+      <img class="badge-img" src="https://img.shields.io/badge/extends-ga--pubsub--core-4ade80.svg" alt="Extends core" />
+    </div>
+  </div>
+
+  <!-- Introduction -->
+  <section id="introduction">
+    <h2>Introduction</h2>
+    <p>GA-PubSub Pro extends GA-PubSub Core with the security and infrastructure features that production systems require. Every PRO feature is opt-in — you enable only what you need. Everything from the Core works exactly as documented in the <a href="docs-core.html">Core docs</a>.</p>
+    <div class="grid">
+      <div class="card"><div class="icon">🔐</div><h4>HMAC Signing</h4><p>Sign every envelope. Detect tampering instantly on inbound transport messages.</p></div>
+      <div class="card"><div class="icon">⏱️</div><h4>Rate Limiting</h4><p>Token-bucket per source. Configurable burst capacity. Throws on violation.</p></div>
+      <div class="card"><div class="icon">🔒</div><h4>Authorization</h4><p>Pattern-based authorizers with wildcard support. Per-event, per-user rules.</p></div>
+      <div class="card"><div class="icon">🛡️</div><h4>Replay Prevention</h4><p>Monotonic sequence enforcement. Duplicate or rewound envelopes are rejected.</p></div>
+      <div class="card"><div class="icon">🏢</div><h4>Multi-Tenancy</h4><p>Isolated namespace registry. One bus per tenant, zero cross-tenant leakage.</p></div>
+      <div class="card"><div class="icon">🔌</div><h4>Transport Adapters</h4><p>Redis, Kafka, WebSocket, NATS, RabbitMQ — plug in any broker.</p></div>
+    </div>
+  </section>
+
+  <!-- Installation -->
+  <section id="installation">
+    <h2>Installation</h2>
+    <p>PRO is distributed via private GitHub Release. You receive access to the private repository when you purchase a license.</p>
+    <pre><code><span class="cm"># Install from a pinned release tag (recommended)</span>
+npm install github:YOUR_ORG/ga-pubsub-pro#pro-v1.0.0
+
+<span class="cm"># Or directly from the release tarball URL</span>
+npm install https://github.com/YOUR_ORG/ga-pubsub-pro/releases/download/pro-v1.0.0/ga-pubsub-pro-1.0.0.tgz</code></pre>
+    <p>Also install the Core package, which PRO depends on:</p>
+    <pre><code>npm install ga-pubsub-core</code></pre>
+  </section>
+
+  <!-- Drop-in Upgrade -->
+  <section id="upgrade">
+    <h2>Drop-in Upgrade</h2>
+    <p>If you are upgrading from Core, change the import. Nothing else in your code needs to change — <code>ProEventBus</code> is exported as <code>EventBus</code> from <code>ga-pubsub-pro</code>.</p>
+    <pre><code><span class="cm">// Before (Core)</span>
+<span class="kw">import</span> { <span class="cls">EventBus</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-core'</span>;
+
+<span class="cm">// After (PRO) — identical API, PRO features added via constructor options</span>
+<span class="kw">import</span> { <span class="cls">EventBus</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;
+
+<span class="kw">const</span> bus = <span class="kw">new</span> <span class="cls">EventBus</span>({
+  namespace: <span class="str">'my-app'</span>,
+  licenseKey: process.env.<span class="cls">GA_PUBSUB_LICENSE_KEY</span>,
+  enableSigning: <span class="kw">true</span>,
+  signingSecret: process.env.<span class="cls">SIGNING_SECRET</span>,
+  rateLimit: <span class="num">100</span>,
+});</code></pre>
+  </section>
+
+  <!-- License Key Setup -->
+  <section id="license-key">
+    <h2>License Key Setup</h2>
+    <p>Every PRO instance requires a valid license key in production. The key is validated offline on the first <code>publish()</code> call using HMAC-SHA256 — no internet connection or license server is contacted.</p>
+    <pre><code><span class="kw">import</span> { <span class="cls">ProEventBus</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;
+
+<span class="kw">const</span> bus = <span class="kw">new</span> <span class="cls">ProEventBus</span>({
+  namespace: <span class="str">'production'</span>,
+  <span class="cm">// Pass via environment variable — never hardcode</span>
+  licenseKey: process.env.<span class="cls">GA_PUBSUB_LICENSE_KEY</span>,
+});</code></pre>
+    <div class="callout danger">
+      <p><strong>Security</strong> — Store your license key in a server-side environment variable only.
+      Never include it in a browser bundle, client-side code, or commit it to version control.</p>
+    </div>
+    <p>You can inspect the validated license info after the first publish:</p>
+    <pre><code><span class="kw">await</span> bus.<span class="fn">publish</span>(<span class="str">'app.started'</span>, {});
+<span class="kw">const</span> info = bus.<span class="fn">getLicenseInfo</span>();
+console.<span class="fn">log</span>(info?.plan);          <span class="cm">// 'professional'</span>
+console.<span class="fn">log</span>(info?.daysUntilExpiry); <span class="cm">// e.g. 312</span></code></pre>
+    <div class="callout warn">
+      <p><strong>Expiry warning</strong> — GA-PubSub Pro logs a console warning 30 days before your key expires.
+      Renew at <a href="https://deslay-ai.web.app/ga-pubsub-pro/queries">deslay-ai.web.app/ga-pubsub-pro/queries</a>.</p>
+    </div>
+  </section>
+
+  <!-- HMAC Signing -->
+  <section id="hmac">
+    <h2>HMAC Envelope Signing</h2>
+    <p>When enabled, every published envelope is signed with HMAC-SHA256 before delivery. Inbound transport messages are verified before being dispatched to local subscribers — a single tampered byte throws <code>TamperDetectedError</code>.</p>
+    <pre><code><span class="kw">const</span> bus = <span class="kw">new</span> <span class="cls">ProEventBus</span>({
+  enableSigning:    <span class="kw">true</span>,
+  signingSecret:    process.env.<span class="cls">SIGNING_SECRET</span>,
+  verifySignatures: <span class="kw">true</span>, <span class="cm">// verify inbound transport messages</span>
+});
+
+<span class="cm">// Sign and verify manually (e.g. for custom transport adapters)</span>
+<span class="kw">import</span> { <span class="fn">signEnvelope</span>, <span class="fn">verifyEnvelope</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;
+
+<span class="kw">const</span> sig     = <span class="kw">await</span> <span class="fn">signEnvelope</span>(envelope, secret);
+<span class="kw">const</span> isValid = <span class="kw">await</span> <span class="fn">verifyEnvelope</span>(envelope, secret);</code></pre>
+    <div class="callout tip">
+      <p><strong>Tip</strong> — Signing uses the Web Crypto API, which is available natively in Node 18+, all modern browsers, Deno, and Cloudflare Workers. No crypto library dependency needed.</p>
+    </div>
+  </section>
+
+  <!-- Rate Limiting -->
+  <section id="rate-limit">
+    <h2>Rate Limiting</h2>
+    <p>Token-bucket rate limiting per source. Set <code>rateLimit</code> to the sustained events-per-second cap. <code>rateLimitBurst</code> controls the burst capacity (defaults to <code>rateLimit × 2</code>).</p>
+    <pre><code><span class="kw">const</span> bus = <span class="kw">new</span> <span class="cls">ProEventBus</span>({
+  rateLimit:      <span class="num">100</span>,  <span class="cm">// 100 events/sec sustained</span>
+  rateLimitBurst: <span class="num">150</span>,  <span class="cm">// allow short bursts up to 150</span>
+  source:         <span class="str">'order-service'</span>,
+});
+
+<span class="cm">// Throws RateLimitExceededError when the bucket is empty</span>
+<span class="kw">await</span> bus.<span class="fn">publish</span>(<span class="str">'order.created'</span>, payload);</code></pre>
+    <p>Rate limiting is tracked per <code>source</code> string — different publishers are metered independently.</p>
+
+    <h3>Using RateLimiter directly</h3>
+    <pre><code><span class="kw">import</span> { <span class="cls">RateLimiter</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;
+
+<span class="kw">const</span> limiter = <span class="kw">new</span> <span class="cls">RateLimiter</span>(<span class="num">50</span>, <span class="num">80</span>); <span class="cm">// 50/s, burst 80</span>
+limiter.<span class="fn">consume</span>(<span class="str">'my-service'</span>);          <span class="cm">// throws if exceeded</span></code></pre>
+  </section>
+
+  <!-- Authorization -->
+  <section id="authorization">
+    <h2>Authorization</h2>
+    <p>Register authorizer functions per event pattern. Authorizers receive the full envelope and an <code>AuthContext</code>. Return <code>true</code> to allow, <code>false</code> to deny.</p>
+    <pre><code>bus.<span class="fn">authorize</span>(<span class="str">'admin.**'</span>, (envelope, ctx) =&gt; {
+  <span class="kw">return</span> ctx.roles?.includes(<span class="str">'admin'</span>) ?? <span class="kw">false</span>;
+});
+
+bus.<span class="fn">authorize</span>(<span class="str">'user.*'</span>, (envelope, ctx) =&gt; {
+  <span class="kw">return</span> ctx.userId !== <span class="kw">undefined</span>;
+});
+
+<span class="cm">// Publish with auth context</span>
+<span class="kw">await</span> bus.<span class="fn">publish</span>(<span class="str">'admin.settings.updated'</span>, payload, {
+  userId: <span class="str">'u_42'</span>,
+  metadata: { roles: [<span class="str">'admin'</span>] },
+});</code></pre>
+
+    <h3>AuthContext shape</h3>
+    <div class="table-wrap"><table>
+      <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>userId</code></td><td>string?</td><td>Authenticated user ID</td></tr>
+      <tr><td><code>roles</code></td><td>string[]?</td><td>Role list (e.g. <code>['admin', 'editor']</code>)</td></tr>
+      <tr><td><code>permissions</code></td><td>string[]?</td><td>Permission strings</td></tr>
+      <tr><td><code>tenantId</code></td><td>string?</td><td>Tenant identifier for multi-tenant setups</td></tr>
+      <tr><td><code>claims</code></td><td>Record&lt;string, unknown&gt;?</td><td>Arbitrary JWT claims or custom data</td></tr>
+    </table></div>
+  </section>
+
+  <!-- Replay Prevention -->
+  <section id="replay-prevention">
+    <h2>Replay-Attack Prevention</h2>
+    <p>Envelopes carry a monotonic sequence number per source. Inbound transport messages are checked against a <code>SequenceTracker</code> — duplicated or rewound sequences throw <code>ReplayAttackError</code>.</p>
+    <pre><code><span class="kw">const</span> bus = <span class="kw">new</span> <span class="cls">ProEventBus</span>({
+  enableReplayPrevention: <span class="kw">true</span>,
+});
+
+<span class="cm">// Use SequenceTracker standalone</span>
+<span class="kw">import</span> { <span class="cls">SequenceTracker</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;
+
+<span class="kw">const</span> tracker = <span class="kw">new</span> <span class="cls">SequenceTracker</span>();
+tracker.<span class="fn">check</span>(envelope); <span class="cm">// throws ReplayAttackError if replayed</span></code></pre>
+  </section>
+
+  <!-- Payload Size -->
+  <section id="payload-size">
+    <h2>Payload Size Enforcement</h2>
+    <p>Enforces a maximum serialised payload size in bytes before any subscriber runs. Default is 64 KB. Set to <code>0</code> to disable.</p>
+    <pre><code><span class="kw">const</span> bus = <span class="kw">new</span> <span class="cls">ProEventBus</span>({
+  maxPayloadBytes: <span class="num">32_768</span>, <span class="cm">// 32 KB custom limit</span>
+});
+
+<span class="cm">// Enforce on a single envelope without a full bus</span>
+<span class="kw">import</span> { <span class="fn">enforcePayloadLimit</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;
+<span class="fn">enforcePayloadLimit</span>(<span class="str">'order.placed'</span>, payload, <span class="num">65_536</span>);</code></pre>
+  </section>
+
+  <!-- Multi-Tenancy -->
+  <section id="multi-tenant">
+    <h2>Multi-Tenant Namespace Registry</h2>
+    <p><code>getBus(namespace)</code> returns a singleton <code>ProEventBus</code> per namespace string. Namespaces are fully isolated — subscribers in one namespace never receive events from another.</p>
+    <pre><code><span class="kw">import</span> { <span class="fn">getBus</span>, <span class="fn">listNamespaces</span>, <span class="fn">destroyNamespace</span>, <span class="fn">destroyAll</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;
+
+<span class="cm">// Each tenant gets its own isolated bus</span>
+<span class="kw">const</span> acmeBus  = <span class="fn">getBus</span>(<span class="str">'acme-corp'</span>);
+<span class="kw">const</span> globeBus = <span class="fn">getBus</span>(<span class="str">'globex-inc'</span>);
+
+acmeBus.<span class="fn">subscribe</span>(<span class="str">'order.placed'</span>, handleOrder);
+<span class="cm">// globeBus subscribers never receive acme events</span>
+
+<span class="cm">// Lifecycle management</span>
+<span class="fn">listNamespaces</span>();           <span class="cm">// ['acme-corp', 'globex-inc']</span>
+<span class="kw">await</span> <span class="fn">destroyNamespace</span>(<span class="str">'acme-corp'</span>);
+<span class="kw">await</span> <span class="fn">destroyAll</span>();</code></pre>
+  </section>
+
+  <!-- Scoped Bus -->
+  <section id="scoped-bus">
+    <h2>Scoped Bus</h2>
+    <p><code>createScopedBus(bus, prefix)</code> returns a <code>ScopedBus</code> that auto-prepends the prefix to every <code>publish</code> and <code>subscribe</code> call. Multiple scopes on the same bus are independent.</p>
+    <pre><code><span class="kw">import</span> { <span class="cls">ProEventBus</span>, <span class="fn">createScopedBus</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;
+
+<span class="kw">const</span> root     = <span class="kw">new</span> <span class="cls">ProEventBus</span>({ namespace: <span class="str">'app'</span> });
+<span class="kw">const</span> orders   = <span class="fn">createScopedBus</span>(root, <span class="str">'orders'</span>);
+<span class="kw">const</span> payments = <span class="fn">createScopedBus</span>(root, <span class="str">'payments'</span>);
+
+<span class="cm">// publishes as 'orders.created'</span>
+<span class="kw">await</span> orders.<span class="fn">publish</span>(<span class="str">'created'</span>, { orderId: <span class="str">'001'</span> });
+
+<span class="cm">// subscribes to 'payments.charged'</span>
+payments.<span class="fn">subscribe</span>(<span class="str">'charged'</span>, handler);</code></pre>
+  </section>
+
+  <!-- Transport Adapters -->
+  <section id="transport">
+    <h2>Transport Adapters</h2>
+    <p>Connect <code>ProEventBus</code> to an external message broker by implementing the <code>TransportAdapter</code> interface and passing it to the constructor. Inbound messages are HMAC-verified and replay-checked before dispatch.</p>
+    <pre><code><span class="kw">import type</span> { <span class="cls">TransportAdapter</span>, <span class="cls">EventEnvelope</span> } <span class="kw">from</span> <span class="str">'ga-pubsub-pro'</span>;
+
+<span class="kw">class</span> <span class="cls">MyRedisAdapter</span> <span class="kw">implements</span> <span class="cls">TransportAdapter</span> {
+  <span class="kw">readonly</span> name = <span class="str">'redis'</span>;
+  <span class="kw">async</span> <span class="fn">connect</span>() { <span class="cm">/* connect to Redis */</span> }
+  <span class="kw">async</span> <span class="fn">disconnect</span>() { <span class="cm">/* clean up */</span> }
+  <span class="kw">async</span> <span class="fn">publish</span>(env: <span class="cls">EventEnvelope</span>) { <span class="cm">/* publish to Redis channel */</span> }
+  <span class="kw">async</span> <span class="fn">subscribe</span>(pattern: <span class="kw">string</span>, cb: (env: <span class="cls">EventEnvelope</span>) =&gt; <span class="kw">void</span>) {
+    <span class="cm">/* subscribe to Redis pattern, call cb on message */</span>
+    <span class="kw">return</span> () =&gt; { <span class="cm">/* unsubscribe */</span> };
+  }
+  <span class="kw">async</span> <span class="fn">ping</span>() { <span class="kw">return true</span>; }
+  <span class="fn">on</span>(event: <span class="kw">string</span>, handler: (...args: <span class="kw">unknown</span>[]) =&gt; <span class="kw">void</span>) {}
+  <span class="fn">off</span>(event: <span class="kw">string</span>, handler: (...args: <span class="kw">unknown</span>[]) =&gt; <span class="kw">void</span>) {}
+}
+
+<span class="kw">const</span> bus = <span class="kw">new</span> <span class="cls">ProEventBus</span>({
+  transport: <span class="kw">new</span> <span class="cls">MyRedisAdapter</span>(),
+  enableSigning:    <span class="kw">true</span>,
+  verifySignatures: <span class="kw">true</span>,
+  signingSecret:    process.env.<span class="cls">SIGNING_SECRET</span>,
+});</code></pre>
+  </section>
+
+  <!-- ProBusOptions -->
+  <section id="pro-options">
+    <h2>ProBusOptions</h2>
+    <p>All <a href="docs-core.html#bus-options">Core EventBus options</a> are inherited. PRO adds:</p>
+    <div class="table-wrap"><table>
+      <tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      <tr><td><code>licenseKey</code></td><td>string</td><td>—</td><td>Your PRO license key. Required for production.</td></tr>
+      <tr><td><code>enableSigning</code></td><td>boolean</td><td><code>false</code></td><td>Sign outbound envelopes with HMAC-SHA256</td></tr>
+      <tr><td><code>signingSecret</code></td><td>string</td><td>—</td><td>Secret for HMAC signing/verification</td></tr>
+      <tr><td><code>verifySignatures</code></td><td>boolean</td><td><code>false</code></td><td>Verify signatures on inbound transport messages</td></tr>
+      <tr><td><code>enableReplayPrevention</code></td><td>boolean</td><td><code>false</code></td><td>Reject replayed envelopes via sequence tracker</td></tr>
+      <tr><td><code>maxPayloadBytes</code></td><td>number</td><td><code>65536</code></td><td>Max payload size in bytes. 0 = unlimited.</td></tr>
+      <tr><td><code>rateLimit</code></td><td>number</td><td><code>0</code></td><td>Sustained events/sec limit. 0 = unlimited.</td></tr>
+      <tr><td><code>rateLimitBurst</code></td><td>number</td><td><code>rateLimit × 2</code></td><td>Burst capacity above rateLimit</td></tr>
+      <tr><td><code>transport</code></td><td>TransportAdapter</td><td>—</td><td>External broker adapter</td></tr>
+    </table></div>
+  </section>
+
+  <!-- API Reference -->
+  <section id="api">
+    <h2>API Reference (PRO additions)</h2>
+    <p>All <a href="docs-core.html#api">Core API methods</a> are available. PRO adds:</p>
+    <div class="table-wrap"><table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>authorize(pattern, fn)</code></td><td><code>this</code></td><td>Register an authorizer for an event pattern</td></tr>
+      <tr><td><code>getLicenseInfo()</code></td><td><code>LicenseInfo | undefined</code></td><td>Returns validated license data after first publish</td></tr>
+      <tr><td><code>getBus(namespace)</code></td><td><code>ProEventBus</code></td><td>Get or create the singleton bus for a namespace</td></tr>
+      <tr><td><code>listNamespaces()</code></td><td><code>string[]</code></td><td>List all active namespace keys in the registry</td></tr>
+      <tr><td><code>destroyNamespace(ns)</code></td><td><code>Promise&lt;void&gt;</code></td><td>Destroy and remove a namespace bus</td></tr>
+      <tr><td><code>destroyAll()</code></td><td><code>Promise&lt;void&gt;</code></td><td>Destroy every namespace bus in the registry</td></tr>
+      <tr><td><code>createScopedBus(bus, prefix)</code></td><td><code>ScopedBus</code></td><td>Create an auto-prefixed bus wrapper</td></tr>
+    </table></div>
+  </section>
+
+  <!-- Error Classes -->
+  <section id="errors">
+    <h2>Error Classes (PRO additions)</h2>
+    <p>All <a href="docs-core.html#errors">Core error classes</a> are inherited. PRO adds:</p>
+    <div class="table-wrap"><table>
+      <tr><th>Class</th><th>Code</th><th>When thrown</th></tr>
+      <tr><td><code>AuthorizationDeniedError</code></td><td><code>AUTHORIZATION_DENIED</code></td><td>Authorizer returned false for an unauthenticated publisher</td></tr>
+      <tr><td><code>RateLimitExceededError</code></td><td><code>RATE_LIMIT_EXCEEDED</code></td><td>Token bucket exhausted for the event source</td></tr>
+      <tr><td><code>PayloadTooLargeError</code></td><td><code>PAYLOAD_TOO_LARGE</code></td><td>Serialised payload exceeds <code>maxPayloadBytes</code></td></tr>
+      <tr><td><code>TamperDetectedError</code></td><td><code>TAMPER_DETECTED</code></td><td>HMAC signature verification failed on inbound envelope</td></tr>
+      <tr><td><code>ReplayAttackError</code></td><td><code>REPLAY_ATTACK</code></td><td>Sequence number was duplicated or rewound</td></tr>
+      <tr><td><code>LicenseError</code></td><td>(see below)</td><td>License key validation failed</td></tr>
+    </table></div>
+  </section>
+
+  <!-- License Key Errors -->
+  <section id="key-errors">
+    <h2>License Key Errors</h2>
+    <p>All license errors extend <code>LicenseError</code> and carry a <code>code</code> field.</p>
+
+    <div class="error-block">
+      <div class="code-label">MISSING_KEY</div>
+      <p><strong>No license key provided.</strong></p>
+      <p>Fix: Pass <code>licenseKey: process.env.GA_PUBSUB_LICENSE_KEY</code> to the constructor. Purchase at <a href="https://deslay-ai.web.app/ga-pubsub-pro">deslay-ai.web.app/ga-pubsub-pro</a>.</p>
+    </div>
+
+    <div class="error-block">
+      <div class="code-label">INVALID_FORMAT</div>
+      <p><strong>Key string does not match expected format.</strong></p>
+      <p>Fix: Copy the key exactly as issued — no spaces, no line breaks, no truncation. Keys start with <code>lk_</code>.</p>
+    </div>
+
+    <div class="error-block">
+      <div class="code-label">INVALID_SIGNATURE</div>
+      <p><strong>HMAC signature mismatch — key was altered or corrupted.</strong></p>
+      <p>Fix: Do not modify the key. Request a replacement at <a href="https://deslay-ai.web.app/ga-pubsub-pro/queries">deslay-ai.web.app/ga-pubsub-pro/queries</a>.</p>
+    </div>
+
+    <div class="error-block">
+      <div class="code-label">EXPIRED</div>
+      <p><strong>License key expiry date has passed.</strong></p>
+      <p>Fix: Renew your key at <a href="https://deslay-ai.web.app/ga-pubsub-pro/queries">deslay-ai.web.app/ga-pubsub-pro/queries</a>. A 30-day warning is logged before expiry.</p>
+    </div>
+  </section>
+
+  <!-- License -->
+  <section id="license">
+    <h2>License</h2>
+    <p>GA-PubSub Pro is licensed under a <strong>commercial license</strong>. See <code>packages/pro/LICENSE</code> in the private repository for full terms.</p>
+    <ul>
+      <li>A valid license key is required for production use.</li>
+      <li>The key may not be shared outside your licensed team.</li>
+      <li>Redistribution, reselling, or sublicensing is prohibited.</li>
+      <li>SaaS/hosted offerings require the Enterprise plan.</li>
+      <li>Rotate and report compromised keys within 48 hours.</li>
+    </ul>
+    <p>For permitted-use questions: <a href="https://deslay-ai.web.app/ga-pubsub-pro/queries">deslay-ai.web.app/ga-pubsub-pro/queries</a></p>
+  </section>
+
+  <!-- Support -->
+  <section id="support">
+    <h2>Support</h2>
+    <div class="grid">
+      <div class="card">
+        <h4>Licensing & queries</h4>
+        <p>Purchase, renewal, key issues, evaluation requests, technical questions about PRO.</p>
+        <p style="margin-top:10px"><a href="https://deslay-ai.web.app/ga-pubsub-pro/queries">deslay-ai.web.app/ga-pubsub-pro/queries →</a></p>
+      </div>
+      <div class="card">
+        <h4>Customer service</h4>
+        <p>Billing, enterprise onboarding, production emergencies, account management.</p>
+        <p style="margin-top:10px"><a href="https://deslay-ai.web.app/ga-pubsub-pro/services">deslay-ai.web.app/ga-pubsub-pro/services →</a></p>
+      </div>
+      <div class="card">
+        <h4>Core / Community</h4>
+        <p>General questions about GA-PubSub Core and open discussion.</p>
+        <p style="margin-top:10px"><a href="https://deslay-ai.web.app/community">deslay-ai.web.app/community →</a></p>
+      </div>
+      <div class="card">
+        <h4>Core documentation</h4>
+        <p>Full API reference for GA-PubSub Core — all features inherited by PRO.</p>
+        <p style="margin-top:10px"><a href="docs-core.html">Core Docs →</a></p>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<footer>
+  <p>Built by <a href="https://deslay-ai.web.app/ga-pubsub-pro">Ajithraj G</a> &nbsp;·&nbsp;
+     <a href="https://deslay-ai.web.app/ga-pubsub-pro/queries">Queries</a> &nbsp;·&nbsp;
+     <a href="https://deslay-ai.web.app/ga-pubsub-pro/services">Customer Service</a> &nbsp;·&nbsp;
+     Commercial License
+  </p>
+</footer>
+
+<script>
+  const links = document.querySelectorAll('aside a');
+  const sections = document.querySelectorAll('section[id]');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`aside a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>
