@@ -49,6 +49,6 @@ lerna-debug.log*
 *.bak
 
 packages/pro/
-coverage/
 ga-automations/
 website-content/
+coverage/
