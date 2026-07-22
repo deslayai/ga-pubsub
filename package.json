@@ -4,7 +4,14 @@
   "private": true,
   "description": "GA-PubSub \u2014 Enterprise-grade, security-first, transport-agnostic eventing platform",
   "workspaces": [
-    "packages/*"
+    "packages/core",
+    "packages/broadcast-channel",
+    "packages/kafka",
+    "packages/nats",
+    "packages/rabbitmq",
+    "packages/redis",
+    "packages/sse",
+    "packages/websocket"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
