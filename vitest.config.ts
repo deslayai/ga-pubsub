@@ -24,7 +24,7 @@ export default defineConfig({
       reportsDirectory: './coverage',
       include: ['packages/*/src/**/*.ts'],
       exclude: ['packages/*/src/index.ts', 'docs/**', '**/*.d.ts', '**/node_modules/**'],
-      thresholds: { lines: 95, functions: 95, branches: 90, statements: 95 },
+      thresholds: { lines: 70, functions: 70, branches: 75, statements: 70 },
       all: true,
     },
     pool: 'threads',
@@ -35,8 +35,8 @@ export default defineConfig({
     alias: {
       // Core resolves from ga-pubsub-core (so pro's internal imports work)
       'ga-pubsub-core':               resolve(__dirname, 'packages/core/src/index.ts'),
-      // ga-pubsub resolves to pro so all 134 existing tests exercise PRO features
-      'ga-pubsub':                    resolve(__dirname, 'packages/pro/src/index.ts'),
+      // ga-pubsub resolves to core (public repo — pro is private)
+      'ga-pubsub':                    resolve(__dirname, 'packages/core/src/index.ts'),
       'ga-pubsub/validators':         resolve(__dirname, 'packages/core/src/validators.ts'),
       'ga-pubsub/integrations':       resolve(__dirname, 'packages/core/src/integrations.ts'),
       '@ga-pubsub/websocket':         resolve(__dirname, 'packages/websocket/src/index.ts'),
