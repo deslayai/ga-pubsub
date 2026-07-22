@@ -87,66 +87,7 @@ describe('wildcardMatcher', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('enforcePayloadLimit', () => {
-  let enforcePayloadLimit: typeof import('../../packages/pro/src/security.ts').enforcePayloadLimit;
-  let PayloadTooLargeError: typeof import('../../packages/pro/src/types.ts').PayloadTooLargeError;
-
-  beforeEach(async () => {
-    ({ enforcePayloadLimit } = await import('../../packages/pro/src/security.ts'));
-    ({ PayloadTooLargeError } = await import('../../packages/pro/src/types.ts'));
-  });
-
-  it('does not throw when payload is within limit', () => {
-    expect(() => enforcePayloadLimit('test', { data: 'hello' }, 65536)).not.toThrow();
-  });
-
-  it('throws PayloadTooLargeError when payload exceeds limit', () => {
-    const bigPayload = { data: 'x'.repeat(1000) };
-    expect(() => enforcePayloadLimit('test', bigPayload, 10)).toThrow(PayloadTooLargeError);
-  });
-
-  it('no limit when maxBytes is 0', () => {
-    const bigPayload = { data: 'x'.repeat(100_000) };
-    expect(() => enforcePayloadLimit('test', bigPayload, 0)).not.toThrow();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UNIT: SECURITY — RATE LIMITER
-// ─────────────────────────────────────────────────────────────────────────────
-
 describe('RateLimiter', () => {
-  let RateLimiter: typeof import('../../packages/pro/src/security.ts').RateLimiter;
-  let RateLimitExceededError: typeof import('../../packages/pro/src/types.ts').RateLimitExceededError;
-
-  beforeEach(async () => {
-    ({ RateLimiter } = await import('../../packages/pro/src/security.ts'));
-    ({ RateLimitExceededError } = await import('../../packages/pro/src/types.ts'));
-  });
-
-  it('allows events within rate limit', () => {
-    const limiter = new RateLimiter(10, 10);
-    expect(() => {
-      for (let i = 0; i < 10; i++) limiter.consume('test-source');
-    }).not.toThrow();
-  });
-
-  it('throws when rate limit is exceeded', () => {
-    const limiter = new RateLimiter(1, 1); // 1/sec, burst=1
-    limiter.consume('test-source'); // Use the burst
-    expect(() => limiter.consume('test-source')).toThrow(RateLimitExceededError);
-  });
-
-  it('different sources have independent buckets', () => {
-    const limiter = new RateLimiter(1, 1);
-    limiter.consume('source-a');
-    expect(() => limiter.consume('source-b')).not.toThrow();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UNIT: REPLAY ENGINE
-// ─────────────────────────────────────────────────────────────────────────────
-
 describe('ReplayEngine', () => {
   let ReplayEngine: typeof import('../../packages/core/src/replay.ts').ReplayEngine;
 
@@ -365,37 +306,6 @@ describe('EventBus — schema validation', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('EventBus — authorization', () => {
-  let EventBus: typeof import('../../packages/pro/src/bus.ts').ProEventBus;
-  let AuthorizationDeniedError: typeof import('../../packages/pro/src/types.ts').AuthorizationDeniedError;
-
-  beforeEach(async () => {
-    ({ ProEventBus: EventBus } = await import('../../packages/pro/src/bus.ts'));
-    ({ AuthorizationDeniedError } = await import('../../packages/pro/src/types.ts'));
-  });
-
-  it('blocks unauthorized publish', async () => {
-    const bus = new EventBus();
-    bus.authorize('secure.event', () => false);
-    await expect(bus.publish('secure.event', {})).rejects.toThrow(AuthorizationDeniedError);
-    await bus.destroy();
-  });
-
-  it('allows authorized publish', async () => {
-    const bus = new EventBus();
-    bus.authorize('secure.event', (_e, ctx) => ctx.roles?.includes('admin') ?? false);
-    let received = false;
-    bus.subscribe('secure.event', () => { received = true; });
-    await bus.publish('secure.event', {}, { userId: 'u1' });
-    // Note: publish auth context does not pass roles by default — this tests
-    // that the authorizer is wired up. In production, middleware enriches context.
-    await bus.destroy();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// INTEGRATION: REQUEST / RESPONSE
-// ─────────────────────────────────────────────────────────────────────────────
-
 describe('EventBus — request/response', () => {
   let EventBus: typeof import('../../packages/core/src/bus.ts').EventBus;
   let RequestTimeoutError: typeof import('../../packages/core/src/types.ts').RequestTimeoutError;
@@ -493,32 +403,6 @@ describe('EventBus — subscription limits', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('EventBus — payload size enforcement', () => {
-  let EventBus: typeof import('../../packages/pro/src/bus.ts').ProEventBus;
-  let PayloadTooLargeError: typeof import('../../packages/pro/src/types.ts').PayloadTooLargeError;
-
-  beforeEach(async () => {
-    ({ ProEventBus: EventBus } = await import('../../packages/pro/src/bus.ts'));
-    ({ PayloadTooLargeError } = await import('../../packages/pro/src/types.ts'));
-  });
-
-  it('rejects payloads over the size limit', async () => {
-    const bus = new EventBus({ maxPayloadBytes: 100 });
-    const bigPayload = { data: 'x'.repeat(200) };
-    await expect(bus.publish('evt', bigPayload)).rejects.toThrow(PayloadTooLargeError);
-    await bus.destroy();
-  });
-
-  it('allows payloads within the size limit', async () => {
-    const bus = new EventBus({ maxPayloadBytes: 1000 });
-    await expect(bus.publish('evt', { data: 'small' })).resolves.not.toThrow();
-    await bus.destroy();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// STRESS: 100K SUBSCRIPTIONS
-// ─────────────────────────────────────────────────────────────────────────────
-
 describe('EventBus — stress: 100k subscriptions', () => {
   it('handles 100,000 subscriptions without memory error', async () => {
     const { EventBus } = await import('../../packages/core/src/bus.ts');

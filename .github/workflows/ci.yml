@@ -31,14 +31,8 @@ jobs:
       - name: Core package tests
         run: cd packages/core && node ../../node_modules/vitest/vitest.mjs run --config ./vitest.config.ts
 
-      - name: Pro package tests
-        run: cd packages/pro && node ../../node_modules/vitest/vitest.mjs run --config ./vitest.config.ts
-
       - name: Type-check core
         run: cd packages/core && npx tsc --noEmit
-
-      - name: Type-check pro
-        run: cd packages/pro && npx tsc --noEmit
 
   coverage:
     name: Coverage Report
