@@ -82,12 +82,6 @@ describe('wildcardMatcher', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UNIT: SECURITY — PAYLOAD SIZE
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('enforcePayloadLimit', () => {
-describe('RateLimiter', () => {
 describe('ReplayEngine', () => {
   let ReplayEngine: typeof import('../../packages/core/src/replay.ts').ReplayEngine;
 
@@ -305,7 +299,6 @@ describe('EventBus — schema validation', () => {
 // INTEGRATION: AUTHORIZATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('EventBus — authorization', () => {
 describe('EventBus — request/response', () => {
   let EventBus: typeof import('../../packages/core/src/bus.ts').EventBus;
   let RequestTimeoutError: typeof import('../../packages/core/src/types.ts').RequestTimeoutError;
@@ -398,11 +391,6 @@ describe('EventBus — subscription limits', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SECURITY: PAYLOAD SIZE LIMIT
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('EventBus — payload size enforcement', () => {
 describe('EventBus — stress: 100k subscriptions', () => {
   it('handles 100,000 subscriptions without memory error', async () => {
     const { EventBus } = await import('../../packages/core/src/bus.ts');
