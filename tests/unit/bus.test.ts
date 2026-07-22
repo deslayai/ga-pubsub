@@ -456,48 +456,6 @@ describe('EventBus — stress: 10k sequential publishes', () => {
 // CONTRACT: TRANSPORT ADAPTER
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Transport adapter contract test.
- * Run this against each transport implementation to verify conformance.
- */
-export function contractTestTransport(
-  name: string,
-  factory: () => Promise<import('../../packages/core/src/types.ts').TransportAdapter>
-): void {
-  describe(`Transport contract — ${name}`, () => {
-    let transport: import('../../packages/core/src/types.ts').TransportAdapter;
-
-    beforeEach(async () => { transport = await factory(); });
-    afterEach(async () => { await transport.disconnect(); });
-
-    it('connect() resolves without error', async () => {
-      await expect(transport.connect()).resolves.not.toThrow();
-    });
-
-    it('ping() returns true after connect', async () => {
-      await transport.connect();
-      expect(await transport.ping()).toBe(true);
-    });
-
-    it('subscribe() returns a cleanup function', async () => {
-      await transport.connect();
-      const cleanup = await transport.subscribe('test.*', () => {});
-      expect(typeof cleanup).toBe('function');
-      await expect(cleanup()).resolves.not.toThrow();
-    });
-
-    it('publish() sends without error', async () => {
-      await transport.connect();
-      const envelope = makeEnvelope('test.event', { ok: true });
-      await expect(transport.publish(envelope)).resolves.not.toThrow();
-    });
-
-    it('disconnect() resolves without error', async () => {
-      await transport.connect();
-      await expect(transport.disconnect()).resolves.not.toThrow();
-    });
-  });
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
