@@ -70,8 +70,10 @@ export function createReactHook(React: {
     }, [bus, eventName]);
 
     const publish = React.useCallback(
-      (payload: TPayload, opts?: import('./types.js').PublishOptions) =>
-        bus.publish(eventName ?? 'unknown', payload, opts),
+      (...args: unknown[]) => {
+        const [payload, opts] = args as [TPayload, import('./types.js').PublishOptions | undefined];
+        return bus.publish(eventName ?? 'unknown', payload, opts);
+      },
       [bus, eventName]
     ) as (payload: TPayload, opts?: import('./types.js').PublishOptions) => Promise<void>;
 
@@ -178,9 +180,9 @@ export function createExpressMiddleware(
       ...bus,
       publish: (eventName: string, payload: unknown, opts: import('./types.js').PublishOptions = {}) =>
         bus.publish(eventName, payload, {
-          correlationId: correlationId || undefined,
-          tenantId:      tenantId      || undefined,
-          userId:        userId        || undefined,
+          ...(correlationId ? { correlationId } : {}),
+          ...(tenantId      ? { tenantId }      : {}),
+          ...(userId        ? { userId }        : {}),
           ...opts,
         }),
     } as import('./bus.js').EventBus;

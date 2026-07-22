@@ -39,7 +39,7 @@ class LatencyWindow {
     if (data.length === 0) return 0;
     const sorted = data.sort((a, b) => a - b);
     const idx = Math.floor(sorted.length * 0.95);
-    return sorted[Math.min(idx, sorted.length - 1)];
+    return sorted[Math.min(idx, sorted.length - 1)] ?? 0;
   }
 }
 

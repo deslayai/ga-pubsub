@@ -51,10 +51,10 @@ function matchSegments(
   sIdx: number
 ): boolean {
   while (pIdx < pattern.length && sIdx < segments.length) {
-    const seg = pattern[pIdx];
+    const seg = pattern[pIdx]!;
 
     if (seg.kind === EXACT) {
-      if (seg.value !== segments[sIdx]) return false;
+      if (seg.value !== segments[sIdx]!) return false;
       pIdx++;
       sIdx++;
       continue;
@@ -177,8 +177,8 @@ export class SubscriptionIndex {
     if (pattern.includes('*')) {
       const idx = this.wildcards.findIndex(w => w.pattern === pattern);
       if (idx === -1) return;
-      this.wildcards[idx].ids.delete(subscriberId);
-      if (this.wildcards[idx].ids.size === 0) {
+      this.wildcards[idx]!.ids.delete(subscriberId);
+      if (this.wildcards[idx]!.ids.size === 0) {
         this.wildcards.splice(idx, 1);
       }
     } else {
