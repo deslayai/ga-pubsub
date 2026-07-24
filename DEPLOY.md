@@ -9,7 +9,7 @@ Everything uses `GITHUB_TOKEN` (automatically provided by GitHub Actions — no 
 
 | What | How | Cost | API key? |
 |------|-----|------|----------|
-| Distribute `ga-pubsub-core` | GitHub Release `.tgz` (public) | Free | None — auto `GITHUB_TOKEN` |
+| Distribute `ga-pubsub` | GitHub Release `.tgz` (public) | Free | None — auto `GITHUB_TOKEN` |
 | Distribute `ga-pubsub-pro` | GitHub Release `.tgz` (private repo) | Free | None — auto `GITHUB_TOKEN` |
 | Core demo (React SPA + backend) | GitHub Pages + Docker Compose | Free | None |
 | PRO demo (Angular SPA) | GitHub Pages | Free | None |
@@ -45,7 +45,7 @@ This is the **only** secret you ever need to create manually. `GITHUB_TOKEN` eve
 
 ## 2. Releasing packages
 
-### Release ga-pubsub-core (free, public)
+### Release ga-pubsub (free, public)
 
 ```bash
 git tag core-v1.0.0
@@ -56,18 +56,18 @@ The `publish-core.yml` workflow runs automatically:
 1. Installs dependencies
 2. Runs all tests (root + core package)
 3. Builds the package
-4. Runs `npm pack` → creates `ga-pubsub-core-1.0.0.tgz`
+4. Runs `npm pack` → creates `ga-pubsub-1.0.0.tgz`
 5. Creates a public GitHub Release and attaches the tarball
 
 Customers install it directly from the release URL — no npm account needed:
 
 ```bash
-npm install https://github.com/YOUR_ORG/ga-pubsub/releases/download/core-v1.0.0/ga-pubsub-core-1.0.0.tgz
+npm install https://github.com/YOUR_ORG/ga-pubsub/releases/download/core-v1.0.0/ga-pubsub-1.0.0.tgz
 ```
 
 Or if you also publish to npm (optional, free for public packages):
 ```bash
-npm install ga-pubsub-core
+npm install ga-pubsub
 ```
 
 ### Release ga-pubsub-pro (paid, private repo)

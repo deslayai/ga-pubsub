@@ -66,7 +66,7 @@ jobs:
           body: |
             ## ga-pubsub v${{ steps.version.outputs.VERSION }}
 
-            Free, MIT-licensed pub/sub core.
+            Free, Elastic-2.0 licensed pub/sub core.
 
             ### Install
             ```bash

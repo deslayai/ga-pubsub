@@ -63,7 +63,7 @@ async function bootstrap() {
 
   httpServer.listen(serverConfig.port, () => {
     console.log(`\n🚀 GA-PubSub Core Demo running on http://localhost:${serverConfig.port}`);
-    console.log(`   Package: ga-pubsub (free, MIT)\n`);
+    console.log(`   Package: ga-pubsub (free, Elastic-2.0)\n`);
   });
 }
 

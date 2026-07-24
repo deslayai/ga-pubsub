@@ -1,12 +1,12 @@
 /**
  * GA-PubSub Core — Type Definitions  (FREE tier)
  *
- * Contains all types for the free ga-pubsub-core package.
+ * Contains all types for the free ga-pubsub package.
  * PRO types (TransportAdapter, AuthorizerFn, AuthContext, security errors)
  * live in ga-pubsub-pro.
  *
  * @version 1.0.0
- * @license MIT
+ * @license Elastic-2.0
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ export interface SubscriberOptions {
 
   /**
    * Authorization context passed to ga-pubsub-pro's authorizer.
-   * Ignored by ga-pubsub-core (no enforcement in free tier).
+   * Ignored by ga-pubsub (no enforcement in free tier).
    */
   authContext?: Record<string, unknown>;
 }

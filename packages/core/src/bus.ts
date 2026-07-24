@@ -1,7 +1,7 @@
 /**
  * GA-PubSub Core — EventBus  (FREE tier)
  *
- * Included in ga-pubsub-core (MIT):
+ * Included in ga-pubsub (Elastic-2.0):
  *   ✅ Publish / Subscribe with priority ordering
  *   ✅ Wildcard patterns (* and **)
  *   ✅ Middleware pipeline

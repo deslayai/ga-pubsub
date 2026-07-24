@@ -1,5 +1,5 @@
 /**
- * GA-PubSub Core  (FREE tier — MIT)
+ * GA-PubSub Core  (FREE tier — Elastic-2.0)
  *
  * Published as: ga-pubsub
  *

@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/deslayai/ga-pubsub/actions/workflows/ci.yml/badge.svg)](https://github.com/deslayai/ga-pubsub/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/ga-pubsub?color=blue)](https://www.npmjs.com/package/ga-pubsub)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)](./LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4%2B-blue)](https://www.typescriptlang.org)
 
@@ -551,6 +551,6 @@ Full API reference, guides, and examples: **[deslay-ai.web.app/ga-pubsub-docs/re
 
 ## License
 
-MIT © [Ajithraj G](https://ajithraj-g.web.app) & [Gowri KS](https://gowri-ks.web.app)
+Elastic License 2.0 © [Ajithraj G](https://ajithraj-g.web.app) & [Gowri KS](https://gowri-ks.web.app)
 
 See [LICENSE](./LICENSE) for full terms.

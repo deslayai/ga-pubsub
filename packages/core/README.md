@@ -43,10 +43,10 @@ The core package is free to use under the Elastic License 2.0 (ELv2). A [PRO edi
 
 ```bash
 # From GitHub Releases (no registry account needed)
-npm install https://github.com/YOUR_ORG/ga-pubsub/releases/latest/download/ga-pubsub-core-1.0.0.tgz
+npm install https://github.com/YOUR_ORG/ga-pubsub/releases/latest/download/ga-pubsub-1.0.0.tgz
 
 # Or from npm (if published)
-npm install ga-pubsub-core
+npm install ga-pubsub
 ```
 
 ---
@@ -54,7 +54,7 @@ npm install ga-pubsub-core
 ## Quick Start
 
 ```typescript
-import { EventBus } from 'ga-pubsub-core';
+import { EventBus } from 'ga-pubsub';
 
 const bus = new EventBus({ namespace: 'my-app' });
 
@@ -78,7 +78,7 @@ bus.subscribeOnce('app.ready', () => console.log('ready!'));
 ## Middleware
 
 ```typescript
-import { EventBus, loggingMiddleware, ttlGuardMiddleware } from 'ga-pubsub-core';
+import { EventBus, loggingMiddleware, ttlGuardMiddleware } from 'ga-pubsub';
 
 const bus = new EventBus();
 

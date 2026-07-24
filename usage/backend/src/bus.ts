@@ -1,7 +1,7 @@
 /**
  * GA-PubSub Core Demo — EventBus Setup
  *
- * Uses ONLY ga-pubsub (free, MIT) features:
+ * Uses ONLY ga-pubsub (free, Elastic-2.0) features:
  *   - Middleware pipeline (logging + enrichment)
  *   - Schema validation on payment events
  *   - Replay engine (last 200 events, TTL-aware)
