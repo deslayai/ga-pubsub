@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write   # needed to create GitHub Releases
+      id-token: write   # needed for npm Trusted Publishing (OIDC)
 
     steps:
       - uses: actions/checkout@v4
@@ -50,11 +51,9 @@ jobs:
           echo "TARBALL=$TARBALL" >> "$GITHUB_OUTPUT"
           echo "Packed: $TARBALL"
 
-      # Publish to npm
+      # Publish to npm via Trusted Publishing (OIDC — no token required)
       - name: Publish to npm
-        run: cd packages/core && npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: cd packages/core && npm publish --access public --provenance
 
       # Create a public GitHub Release and attach the tarball
       # Uses GITHUB_TOKEN — no extra secret required
