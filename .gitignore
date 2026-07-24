@@ -53,3 +53,6 @@ ga-automations/
 website-content/
 coverage/
 publish-pro/
+
+# PRO workflow — lives in the private ga-pubsub-pro repo only
+.github/workflows/publish-pro.yml
