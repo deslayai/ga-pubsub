@@ -21,7 +21,8 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          registry-url: 'https://registry.npmjs.org'
+          # No registry-url here — it would write an empty _authToken to .npmrc
+          # and block the OIDC token exchange. npm defaults to registry.npmjs.org anyway.
 
       - name: Install monorepo dependencies
         run: npm ci
@@ -53,7 +54,7 @@ jobs:
 
       # Publish to npm via Trusted Publishing (OIDC — no token required)
       - name: Publish to npm
-        run: cd packages/core && npm publish --access public --provenance
+        run: cd packages/core && npm publish --access public --provenance --registry https://registry.npmjs.org
 
       # Create a public GitHub Release and attach the tarball
       # Uses GITHUB_TOKEN — no extra secret required
