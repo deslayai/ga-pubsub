@@ -36,7 +36,7 @@ jobs:
         run: echo "VERSION=${GITHUB_REF_NAME#core-v}" >> "$GITHUB_OUTPUT"
 
       - name: Bump version
-        run: cd packages/core && npm version "${{ steps.version.outputs.VERSION }}" --no-git-tag-version
+        run: cd packages/core && npm version "${{ steps.version.outputs.VERSION }}" --no-git-tag-version --allow-same-version
 
       - name: Build
         run: cd packages/core && npm run build
