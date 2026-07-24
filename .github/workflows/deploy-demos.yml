@@ -3,9 +3,6 @@ name: Deploy Demo Apps → GitHub Pages
 on:
   push:
     branches: [main]
-    paths:
-      - 'usage/frontend/**'
-      - 'packages/core/src/**'
   workflow_dispatch:   # allow manual trigger
 
 permissions:

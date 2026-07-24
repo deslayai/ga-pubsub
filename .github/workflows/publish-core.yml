@@ -20,6 +20,7 @@ jobs:
         with:
           node-version: '20'
           cache: npm
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install monorepo dependencies
         run: npm ci
@@ -48,6 +49,12 @@ jobs:
           TARBALL=$(npm pack 2>/dev/null | tail -1)
           echo "TARBALL=$TARBALL" >> "$GITHUB_OUTPUT"
           echo "Packed: $TARBALL"
+
+      # Publish to npm
+      - name: Publish to npm
+        run: cd packages/core && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Create a public GitHub Release and attach the tarball
       # Uses GITHUB_TOKEN — no extra secret required
