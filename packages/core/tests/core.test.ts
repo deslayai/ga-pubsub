@@ -1,7 +1,7 @@
 /**
- * ga-pubsub-core — Package-level test suite
+ * ga-pubsub — Package-level test suite
  *
- * Imports exclusively from 'ga-pubsub-core' (no pro features).
+ * Imports exclusively from 'ga-pubsub' (no pro features).
  * Run: cd packages/core && npm test
  */
 
@@ -20,8 +20,8 @@ import {
   RequestTimeoutError,
   SubscriptionLimitError,
   MiddlewareAbortError,
-} from 'ga-pubsub-core';
-import type { EventEnvelope } from 'ga-pubsub-core';
+} from 'ga-pubsub';
+import type { EventEnvelope } from 'ga-pubsub';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

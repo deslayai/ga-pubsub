@@ -1,5 +1,5 @@
 {
-  "name": "ga-pubsub-core-demo-backend",
+  "name": "ga-pubsub-demo-backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "serve": "node dist/index.js"
   },
   "dependencies": {
-    "ga-pubsub-core": "^1.0.0",
+    "ga-pubsub": "^1.0.0",
     "cors":           "^2.8.5",
     "express":        "^4.19.2",
     "socket.io":      "^4.7.5",

@@ -1,7 +1,7 @@
 /**
  * GA-PubSub Core Demo — EventBus Setup
  *
- * Uses ONLY ga-pubsub-core (free, MIT) features:
+ * Uses ONLY ga-pubsub (free, MIT) features:
  *   - Middleware pipeline (logging + enrichment)
  *   - Schema validation on payment events
  *   - Replay engine (last 200 events, TTL-aware)
@@ -12,8 +12,8 @@ import {
   EventBus,
   ValidationFailedError,
   loggingMiddleware,
-} from 'ga-pubsub-core';
-import type { EventEnvelope } from 'ga-pubsub-core';
+} from 'ga-pubsub';
+import type { EventEnvelope } from 'ga-pubsub';
 import { serverConfig } from './config.js';
 
 let _bus: EventBus | null = null;

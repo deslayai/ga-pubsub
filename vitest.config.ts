@@ -33,8 +33,6 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Core resolves from ga-pubsub-core (so pro's internal imports work)
-      'ga-pubsub-core':               resolve(__dirname, 'packages/core/src/index.ts'),
       // ga-pubsub resolves to core (public repo — pro is private)
       'ga-pubsub':                    resolve(__dirname, 'packages/core/src/index.ts'),
       'ga-pubsub/validators':         resolve(__dirname, 'packages/core/src/validators.ts'),

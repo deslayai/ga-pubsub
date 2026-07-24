@@ -1,4 +1,4 @@
-name: Publish ga-pubsub-core
+name: Publish ga-pubsub
 
 # Trigger: push a tag like `core-v1.0.0`
 on:
@@ -54,9 +54,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "ga-pubsub-core v${{ steps.version.outputs.VERSION }}"
+          name: "ga-pubsub v${{ steps.version.outputs.VERSION }}"
           body: |
-            ## ga-pubsub-core v${{ steps.version.outputs.VERSION }}
+            ## ga-pubsub v${{ steps.version.outputs.VERSION }}
 
             Free, MIT-licensed pub/sub core.
 
@@ -66,7 +66,7 @@ jobs:
             npm install https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ steps.pack.outputs.TARBALL }}
 
             # Option 2 — if published to npm
-            npm install ga-pubsub-core@${{ steps.version.outputs.VERSION }}
+            npm install ga-pubsub@${{ steps.version.outputs.VERSION }}
             ```
           files: packages/core/${{ steps.pack.outputs.TARBALL }}
           token: ${{ secrets.GITHUB_TOKEN }}

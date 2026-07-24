@@ -1,5 +1,5 @@
 {
-  "name": "ga-pubsub-core",
+  "name": "ga-pubsub",
   "version": "1.0.0",
   "description": "GA-PubSub Core \u2014 free pub/sub event bus for TypeScript (Elastic License 2.0)",
   "type": "module",

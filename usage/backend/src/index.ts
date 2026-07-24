@@ -2,7 +2,7 @@
  * GA-PubSub Core Demo — Backend Server
  *
  * Express HTTP + Socket.io bridge to frontend.
- * Uses ONLY ga-pubsub-core (no PRO features).
+ * Uses ONLY ga-pubsub (no PRO features).
  *
  * Start: npx vite-node src/index.ts
  */
@@ -30,7 +30,7 @@ async function bootstrap() {
   initSocket(httpServer);
 
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', package: 'ga-pubsub-core', timestamp: Date.now() });
+    res.json({ status: 'ok', package: 'ga-pubsub', timestamp: Date.now() });
   });
 
   const demos: Record<string, () => Promise<unknown>> = {
@@ -63,7 +63,7 @@ async function bootstrap() {
 
   httpServer.listen(serverConfig.port, () => {
     console.log(`\n🚀 GA-PubSub Core Demo running on http://localhost:${serverConfig.port}`);
-    console.log(`   Package: ga-pubsub-core (free, MIT)\n`);
+    console.log(`   Package: ga-pubsub (free, MIT)\n`);
   });
 }
 

@@ -1,4 +1,4 @@
-name: Publish ga-pubsub-pro
+name: Publish @deslayai/ga-pubsub-pro
 
 # Trigger: push a tag like `pro-v1.0.0`
 # This workflow lives in the PRIVATE ga-pubsub-pro repo.
@@ -68,9 +68,9 @@ jobs:
       - name: Create GitHub Release (private)
         uses: softprops/action-gh-release@v2
         with:
-          name: "ga-pubsub-pro v${{ steps.version.outputs.VERSION }}"
+          name: "@deslayai/ga-pubsub-pro v${{ steps.version.outputs.VERSION }}"
           body: |
-            ## ga-pubsub-pro v${{ steps.version.outputs.VERSION }}
+            ## @deslayai/ga-pubsub-pro v${{ steps.version.outputs.VERSION }}
 
             Commercial PRO release — for licensed customers only.
             See `packages/pro/LICENSE` for terms.
@@ -81,7 +81,7 @@ jobs:
             npm install https://TOKEN@github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ steps.pack.outputs.TARBALL }}
 
             # Or pin directly to this tag in package.json:
-            # "ga-pubsub-pro": "github:${{ github.repository }}#pro-v${{ steps.version.outputs.VERSION }}"
+            # "@deslayai/ga-pubsub-pro": "github:${{ github.repository }}#pro-v${{ steps.version.outputs.VERSION }}"
             ```
 
             ### License key

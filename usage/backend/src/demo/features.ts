@@ -2,7 +2,7 @@
  * GA-PubSub Core — Feature Demo Handlers (12 demos, no PRO features)
  */
 
-import { ValidationFailedError } from 'ga-pubsub-core';
+import { ValidationFailedError } from 'ga-pubsub';
 import { getBus } from '../bus.js';
 import { broadcast } from '../socket.js';
 import { randomPayment } from '../payment/types.js';

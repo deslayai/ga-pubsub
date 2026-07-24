@@ -14,8 +14,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // ga-pubsub-core resolves to this package's own source
-      'ga-pubsub-core': resolve(__dirname, 'src/index.ts'),
+      // ga-pubsub resolves to this package's own source
+      'ga-pubsub': resolve(__dirname, 'src/index.ts'),
     },
   },
 });

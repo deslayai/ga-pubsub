@@ -1,20 +1,20 @@
 /**
  * GA-PubSub Core  (FREE tier — MIT)
  *
- * Published as: ga-pubsub-core
+ * Published as: ga-pubsub
  *
  * Included:
  *   ✅ EventBus — pub/sub with wildcards, middleware, schema validation, priority,
  *                 subscribeOnce, replay, RPC request/response, TTL, metrics
  *
- * NOT included (ga-pubsub-pro):
+ * NOT included (@deslayai/ga-pubsub-pro):
  *   🔒 Registry / ScopedBus / multi-tenant
  *   🔒 HMAC signing, tamper detection, replay-attack prevention
  *   🔒 Rate limiting, payload size limits
  *   🔒 Authorization (bus.authorize())
  *   🔒 Transport adapters (Redis, Kafka, WebSocket, NATS, RabbitMQ)
  *
- * @module ga-pubsub-core
+ * @module ga-pubsub
  * @version 1.0.0
  */
 
