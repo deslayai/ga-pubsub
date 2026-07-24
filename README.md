@@ -1,19 +1,35 @@
+<div align="center">
+
 # GA-PubSub
 
-> **Enterprise-grade, security-first, transport-agnostic eventing platform for JavaScript and TypeScript ecosystems.**
+**Enterprise-grade, security-first, transport-agnostic eventing platform for JavaScript & TypeScript.**
 
-GA-PubSub combines the simplicity of frontend pub/sub with the extensibility of enterprise messaging platforms — without the operational complexity.
+[![CI](https://github.com/deslayai/ga-pubsub/actions/workflows/ci.yml/badge.svg)](https://github.com/deslayai/ga-pubsub/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/ga-pubsub?color=blue)](https://www.npmjs.com/package/ga-pubsub)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4%2B-blue)](https://www.typescriptlang.org)
+
+[📖 Documentation](https://deslay-ai.web.app/ga-pubsub-docs/reference) · [🚀 Live Demo](https://deslayai.github.io/ga-pubsub/) · [💼 GA-PubSub Pro](https://deslay-ai.web.app/ga-pubsub-pro)
+
+</div>
+
+---
+
+## Overview
+
+GA-PubSub combines the simplicity of in-process pub/sub with the extensibility of enterprise messaging — without the operational complexity. The same API works in a React component, a NestJS service, an AWS Lambda, and a Cloudflare Worker.
 
 ```
 Browser ──┐
 React   ──┤
-Angular ──┤               ┌──────────────────────────┐
-Vue     ──┼──► bus.publish │                          │──► Memory (default)
-Node.js ──┤   bus.subscribe│     GA-PubSub Core       │──► WebSocket
-Express ──┤   bus.request  │   EventBus + Middleware  │──► SSE
-NestJS  ──┤   bus.respond  │   Replay + Auth + Schema │──► BroadcastChannel
-Serverless┤               │   Security + Metrics     │──► Redis
-Edge    ──┘               └──────────────────────────┘──► Kafka / NATS
+Angular ──┤               ┌──────────────────────────────┐
+Vue     ──┼──► bus.publish │                              │──► Memory (default)
+Node.js ──┤   bus.subscribe│     GA-PubSub Core           │──► WebSocket
+Express ──┤   bus.request  │   EventBus · Middleware       │──► SSE
+NestJS  ──┤   bus.respond  │   Replay · Auth · Schema     │──► BroadcastChannel
+Serverless┤               │   Security · Metrics          │──► Redis
+Edge    ──┘               └──────────────────────────────┘──► Kafka / NATS
 ```
 
 ---
@@ -81,25 +97,24 @@ Every event is wrapped in a standardized, signed envelope:
   version:       "1",
   tenantId:      "tenant-a",
   signature:     "a3f9b2...",        // HMAC-SHA256 (when signing enabled)
-  sequence:      42,                 // Monotonic (replay attack prevention)
+  sequence:      42,                 // Monotonic — replay attack prevention
 }
 ```
 
 ### Wildcard Subscriptions
 
 ```typescript
-bus.subscribe('user.*',    handler); // user.created, user.deleted — ONE segment
-bus.subscribe('payments.**', handler); // payments.invoice.created.retry — ANY depth
-bus.subscribe('**',        handler); // ALL events in namespace
+bus.subscribe('user.*',      handler); // ONE segment:  user.created, user.deleted
+bus.subscribe('payments.**', handler); // ANY depth:    payments.invoice.created.retry
+bus.subscribe('**',          handler); // ALL events in namespace
 ```
 
 ### Middleware Pipeline
 
 ```typescript
-// Middlewares run in order before subscriber dispatch
-bus.use(ttlGuardMiddleware());                     // Built-in: drop expired events
-bus.use(loggingMiddleware({ level: 'debug' }));    // Built-in: log all events
-bus.use(timestampMiddleware());                    // Built-in: record processing time
+bus.use(ttlGuardMiddleware());                     // Drop expired events
+bus.use(loggingMiddleware({ level: 'debug' }));    // Log all events
+bus.use(timestampMiddleware());                    // Record processing time
 
 // Custom middleware
 bus.use(async (envelope, next) => {
@@ -131,7 +146,6 @@ await bus.publish('user.created', { id: 'not-a-uuid', email: 'bad' });
 
 ```typescript
 bus.authorize('payment.**', async (envelope, ctx) => {
-  // ctx is populated from SubscriberOptions.authContext or middleware
   return ctx.roles?.includes('finance') ?? false;
 });
 
@@ -142,13 +156,13 @@ await bus.publish('payment.processed', { amount: 1000 });
 ### Request / Response (RPC)
 
 ```typescript
-// Responder (service side)
+// Service side
 bus.respond<{ userId: string }, { name: string }>('user.fetch', async (envelope) => {
   const user = await db.users.findById(envelope.payload.userId);
   return { name: user.name };
 });
 
-// Requester (caller side)
+// Caller side
 const { response } = bus.request<{ userId: string }, { name: string }>(
   'user.fetch',
   { userId: 'usr_123' },
@@ -190,11 +204,10 @@ bus.subscribe('audit.log', callback, {
 const bus = getBus('secure', {
   enableSigning:    true,
   verifySignatures: true,
-  signingSecret:    process.env.SIGNING_SECRET, // NEVER log or expose
+  signingSecret:    process.env.SIGNING_SECRET,
 });
-
-// All published envelopes are HMAC-SHA256 signed
-// Inbound envelopes with invalid/missing signatures are silently dropped
+// All envelopes are HMAC-SHA256 signed.
+// Inbound envelopes with invalid or missing signatures are silently dropped.
 ```
 
 ### Rate Limiting
@@ -211,10 +224,10 @@ const bus = getBus('api', {
 const bus = getBus('untrusted', {
   maxPayloadBytes: 16_384, // 16 KB maximum
 });
-// Exceeding throws PayloadTooLargeError before middleware runs
+// Exceeding limit throws PayloadTooLargeError before middleware runs
 ```
 
-### Subscription Limits (DOS protection)
+### Subscription Limits (DoS protection)
 
 ```typescript
 const bus = getBus('public', {
@@ -228,8 +241,8 @@ const bus = getBus('public', {
 ```typescript
 const bus = getBus('realtime', {
   enableReplayPrevention: true,
-  // Monotonically increasing sequence numbers are enforced
-  // Out-of-order or repeated sequences throw ReplayAttackError
+  // Monotonically increasing sequence numbers are enforced.
+  // Out-of-order or repeated sequences throw ReplayAttackError.
 });
 ```
 
@@ -240,7 +253,7 @@ const tenantA = getBus('tenant-a');
 const tenantB = getBus('tenant-b');
 
 // Cross-tenant publish is structurally impossible —
-// tenantA and tenantB are completely independent EventBus instances
+// each namespace is a completely independent EventBus instance.
 await tenantA.publish('order.created', payload);
 // tenantB subscribers NEVER receive this event
 ```
@@ -275,7 +288,7 @@ const bus = getBus('app', {
   transport: new RedisTransport({
     client:        new Redis({ host: 'redis.internal', tls: {} }),
     keyPrefix:     'myapp',
-    enableStreams:  true,           // persistent
+    enableStreams:  true,
     consumerGroup: 'payment-svc',
     delivery:      'at-least-once',
   })
@@ -293,7 +306,7 @@ const bus = getBus('app', {
     kafka:         new Kafka({ brokers: ['kafka:9092'] }),
     consumerGroup: 'analytics-service',
     topics:        ['payments.**', 'users.*'],
-    delivery:      'best-effort', // idempotent producer, all replicas ACK
+    delivery:      'best-effort',
   })
 });
 ```
@@ -333,11 +346,6 @@ function CartBadge() {
   const { lastEnvelope } = useEventBus<{ items: number }>(bus, 'cart.updated');
   return <span>{lastEnvelope?.payload.items ?? 0}</span>;
 }
-
-function CheckoutButton() {
-  const { publish } = useEventBus(bus, 'checkout.initiated');
-  return <button onClick={() => publish({ source: 'hero' })}>Checkout</button>;
-}
 ```
 
 ### Vue 3
@@ -350,7 +358,6 @@ import { getBus } from 'ga-pubsub';
 const bus = getBus('app');
 const useEventBus = createVueComposable({ ref, readonly, onUnmounted });
 
-// In component setup()
 const { lastEnvelope, publish } = useEventBus<{ count: number }>(bus, 'counter.updated');
 ```
 
@@ -391,9 +398,6 @@ import { createNestModule, PUBSUB_BUS } from 'ga-pubsub/integrations';
 export class AppModule {}
 
 // payment.service.ts
-import { Injectable, Inject } from '@nestjs/common';
-import { PUBSUB_BUS, EventBus } from 'ga-pubsub/integrations';
-
 @Injectable()
 export class PaymentService {
   constructor(@Inject(PUBSUB_BUS) private readonly bus: EventBus) {}
@@ -413,18 +417,18 @@ export class PaymentService {
 ```typescript
 const metrics = bus.getMetrics();
 // {
-//   publishCount:          12_450,
-//   subscribeCount:        38,
-//   failedDeliveries:      2,
-//   middlewareRejections:  0,
-//   authorizationDenials:  0,
-//   validationFailures:    7,
-//   replayCount:           150,
-//   requestCount:          890,
-//   requestTimeouts:       1,
-//   p95LatencyMs:          0.42,
-//   activeSubscriptions:   38,
-//   historySize:           245,
+//   publishCount:         12_450,
+//   subscribeCount:       38,
+//   failedDeliveries:     2,
+//   middlewareRejections: 0,
+//   authorizationDenials: 0,
+//   validationFailures:   7,
+//   replayCount:          150,
+//   requestCount:         890,
+//   requestTimeouts:      1,
+//   p95LatencyMs:         0.42,
+//   activeSubscriptions:  38,
+//   historySize:          245,
 // }
 ```
 
@@ -434,7 +438,6 @@ const metrics = bus.getMetrics();
 import { metrics as otelMetrics, trace } from '@opentelemetry/api';
 
 const meter   = otelMetrics.getMeter('ga-pubsub');
-const tracer  = trace.getTracer('ga-pubsub');
 const pubCount = meter.createCounter('ga_pubsub_publish_total');
 const latency  = meter.createHistogram('ga_pubsub_publish_latency_ms');
 
@@ -447,9 +450,6 @@ const bus = getBus('app', {
     onError(error, ctx) {
       console.error(`[${ctx.phase}]`, error.message, ctx.eventName);
     },
-    onValidationFailure(eventName, errors) {
-      meter.createCounter('ga_pubsub_validation_failures').add(1, { event: eventName });
-    },
   }
 });
 ```
@@ -461,7 +461,6 @@ const bus = getBus('app', {
 ```typescript
 import { getBus, destroyNamespace, listNamespaces } from 'ga-pubsub';
 
-// Each tenant gets a completely isolated bus
 function getTenantBus(tenantId: string) {
   return getBus(`tenant-${tenantId}`, {
     tenantId,
@@ -475,7 +474,7 @@ function getTenantBus(tenantId: string) {
 const busTenantA = getTenantBus('acme-corp');
 await busTenantA.publish('tenant.initialized', { plan: 'enterprise' });
 
-// Tenant offboarding — destroys bus + clears subscriptions + disconnects transport
+// Tenant offboarding — destroys bus, clears subscriptions, disconnects transport
 await destroyNamespace('tenant-acme-corp');
 
 // Audit all active namespaces
@@ -484,16 +483,16 @@ console.log(listNamespaces()); // ['default', 'tenant-acme-corp', 'analytics']
 
 ---
 
-## Performance Targets
+## Performance
 
-| Metric | Target | Implementation |
-|--------|--------|----------------|
+| Metric | Target | How |
+|--------|--------|-----|
 | Exact subscription lookup | O(1) | Hash map index |
 | Wildcard matching | O(k) per pattern | Pre-compiled trie + LRU cache |
 | Memory per subscription | ~200 bytes | Minimal record structure |
 | Max subscriptions | 100,000+ | Verified by stress test |
 | Throughput (in-memory) | 1M+ events/day | Sequential async dispatch |
-| P95 publish latency | <1ms | Ring-buffer sampled |
+| P95 publish latency | < 1 ms | Ring-buffer sampled |
 | Startup overhead | None | Lazy initialization |
 
 ---
@@ -510,20 +509,20 @@ console.log(listNamespaces()); // ['default', 'tenant-acme-corp', 'analytics']
 - [x] Namespace isolation (structurally separate bus instances)
 - [x] Authorization layer (per-event authorizer functions)
 - [x] Schema validation (Zod / JSON Schema / custom)
-- [x] No unsafe defaults (signing off by default — must be explicitly enabled)
+- [x] No unsafe defaults (signing must be explicitly enabled)
 - [x] LRU-bounded pattern cache (prevents memory exhaustion from adversarial patterns)
-- [x] Bounded rate-limit source tracking (prevents memory exhaustion from source flooding)
-- [x] No sensitive data logged (secrets, signatures excluded from all log output)
+- [x] Bounded rate-limit source tracking
+- [x] No sensitive data logged (secrets and signatures excluded from all log output)
 
 ---
 
 ## Testing
 
 ```bash
-# Unit + integration tests
+# Unit tests
 npm test
 
-# With coverage (target: >95%)
+# With coverage report
 npm run test:coverage
 
 # Stress tests (100k subscriptions, 10k sequential publishes)
@@ -535,6 +534,23 @@ npm run test:security
 
 ---
 
+## Documentation
+
+Full API reference, guides, and examples: **[deslay-ai.web.app/ga-pubsub-docs/reference](https://deslay-ai.web.app/ga-pubsub-docs/reference)**
+
+---
+
+## Authors
+
+| | Name | Website |
+|--|------|---------|
+| | [**Ajithraj G**](https://ajithraj-g.web.app) | [ajithraj-g.web.app](https://ajithraj-g.web.app) |
+| | [**Gowri KS**](https://gowri-ks.web.app) | [gowri-ks.web.app](https://gowri-ks.web.app) |
+
+---
+
 ## License
 
-MIT © GA-PubSub Contributors
+MIT © [Ajithraj G](https://ajithraj-g.web.app) & [Gowri KS](https://gowri-ks.web.app)
+
+See [LICENSE](./LICENSE) for full terms.
