@@ -40,6 +40,18 @@ export interface DemoResult {
   timestamp: number;
 }
 
+export interface TransportStatus {
+  websocket:        boolean;
+  sse:              boolean;
+  broadcastChannel: boolean;
+  redis?:           boolean;
+  kafka?:           boolean;
+  nats?:            boolean;
+  rabbitmq?:        boolean;
+  activeTransport:  string;
+  connectedClients: number;
+}
+
 export type FeatureKey =
   | 'basic' | 'wildcard-single' | 'wildcard-multi'
   | 'priority' | 'once' | 'middleware' | 'validation'
