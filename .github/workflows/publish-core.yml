@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write   # needed to create GitHub Releases
-      id-token: write   # needed for npm Trusted Publishing (OIDC)
 
     steps:
       - uses: actions/checkout@v4
@@ -21,8 +20,7 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          # No registry-url here — it would write an empty _authToken to .npmrc
-          # and block the OIDC token exchange. npm defaults to registry.npmjs.org anyway.
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install monorepo dependencies
         run: npm ci
@@ -52,9 +50,11 @@ jobs:
           echo "TARBALL=$TARBALL" >> "$GITHUB_OUTPUT"
           echo "Packed: $TARBALL"
 
-      # Publish to npm via Trusted Publishing (OIDC — no token required)
+      # Publish to npm (Automation token — Trusted Publishing can be set up after first release)
       - name: Publish to npm
-        run: cd packages/core && npm publish --access public --provenance --registry https://registry.npmjs.org
+        run: cd packages/core && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Create a public GitHub Release and attach the tarball
       # Uses GITHUB_TOKEN — no extra secret required
