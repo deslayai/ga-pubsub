@@ -50,6 +50,12 @@ jobs:
           echo "TARBALL=$TARBALL" >> "$GITHUB_OUTPUT"
           echo "Packed: $TARBALL"
 
+      # Verify npm auth before publishing
+      - name: Verify npm auth
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       # Publish to npm (Automation token — Trusted Publishing can be set up after first release)
       - name: Publish to npm
         run: cd packages/core && npm publish --access public
