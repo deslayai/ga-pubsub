@@ -16,7 +16,7 @@
   "files": ["dist", "README.md"],
   "scripts": { "build": "tsc", "dev": "tsc --watch" },
   "peerDependencies": {
-    "ga-pubsub": "^1.0.0",
+    "ga-pubsub": "^3.0.0",
     "kafkajs":   "^2.0.0"
   },
   "peerDependenciesMeta": { "kafkajs": { "optional": false } },

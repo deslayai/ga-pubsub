@@ -15,7 +15,7 @@
   },
   "files": ["dist", "README.md"],
   "scripts": { "build": "tsc", "dev": "tsc --watch" },
-  "peerDependencies": { "ga-pubsub": "^1.0.0" },
+  "peerDependencies": { "ga-pubsub": "^3.0.0" },
   "keywords": ["ga-pubsub", "broadcast-channel", "cross-tab", "transport"],
   "license": "MIT"
 }
