@@ -15,7 +15,7 @@
   },
   "files": ["dist", "README.md"],
   "scripts": { "build": "tsc", "dev": "tsc --watch" },
-  "peerDependencies": { "ga-pubsub": "^3.0.0" },
+  "peerDependencies": { "ga-pubsub": "^3.0.2" },
   "keywords": ["ga-pubsub", "websocket", "transport", "realtime"],
   "license": "MIT"
 }
