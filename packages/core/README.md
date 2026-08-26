@@ -8,7 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![ESM](https://img.shields.io/badge/module-ESM-orange.svg)]()
 
-[Website](https://deslay-ai.web.app/ga-pubsub) · [Community & Support](https://deslay-ai.web.app/community) · [PRO Version](https://deslay-ai.web.app/ga-pubsub-pro)
+[Website](https://deslay-ai.web.app/ga-pubsub-docs/reference) · [Community & Support](https://deslay-ai.web.app/community) · [PRO Pricing](https://deslay-ai.web.app/ga-pubsub-docs/pricing)
 
 </div>
 
@@ -18,7 +18,7 @@
 
 GA-PubSub is a publish/subscribe event bus built for modern TypeScript projects. It works the same way in a React SPA, a Node.js microservice, a Cloudflare Worker, or a Deno edge function — no adapter needed.
 
-The core package is free to use under the Elastic License 2.0 (ELv2). A [PRO edition](https://deslay-ai.web.app/ga-pubsub-pro) adds enterprise features like HMAC signing, rate limiting, authorization, replay-attack prevention, multi-tenancy, and transport adapters (Redis, Kafka, WebSocket, NATS).
+The core package is available under the Elastic License 2.0 (ELv2). [PRO](https://deslay-ai.web.app/ga-pubsub-docs/pricing) adds HMAC signing, independent inbound/outbound rate limits, authorization, replay-attack prevention, multi-tenancy, and nine transport adapters.
 
 ---
 
@@ -31,7 +31,7 @@ The core package is free to use under the Elastic License 2.0 (ELv2). A [PRO edi
 - **Schema validation** — register a validator per event name; invalid payloads are rejected
 - **Request / Response (RPC)** — `bus.request()` + `bus.respond()` with configurable timeout
 - **Replay engine** — late subscribers receive previously published events (ring-buffer, wildcard-aware)
-- **TTL guard** — middleware that silently drops events past their expiry
+- **TTL enforcement** — expired local, replayed, and transported envelopes are dropped before subscriber delivery
 - **Metrics** — built-in counters for publishes, deliveries, failures, auth denials, and p95 latency
 - **Subscription limit** — optional cap to prevent runaway listeners
 - **Cancel in-flight requests** — `handle.cancel()` rejects the response promise immediately
@@ -42,10 +42,6 @@ The core package is free to use under the Elastic License 2.0 (ELv2). A [PRO edi
 ## Installation
 
 ```bash
-# From GitHub Releases (no registry account needed)
-npm install https://github.com/YOUR_ORG/ga-pubsub/releases/latest/download/ga-pubsub-1.0.0.tgz
-
-# Or from npm (if published)
 npm install ga-pubsub
 ```
 
@@ -134,7 +130,7 @@ console.log(payload.result); // 10
 ## Replay
 
 ```typescript
-const bus = new EventBus({ replay: { limit: 100, replayWildcards: true } });
+const bus = new EventBus({ replay: { limit: 100, replayWildcards: true, maxEventTypes: 1000 } });
 
 await bus.publish('app.started', { version: '2.0' });
 
@@ -176,7 +172,7 @@ bus.subscribe('app.*', (e) => {
 
 ## PRO Edition
 
-The free core is intentionally lean. If your project needs any of the following, see the [PRO edition](https://deslay-ai.web.app/ga-pubsub-pro):
+The free core is intentionally lean. For licensed security and external transports, see [PRO pricing](https://deslay-ai.web.app/ga-pubsub-docs/pricing):
 
 | Feature | Core | PRO |
 |---------|:----:|:---:|
@@ -190,11 +186,11 @@ The free core is intentionally lean. If your project needs any of the following,
 | Payload size enforcement | — | ✅ |
 | Multi-tenant namespace registry | — | ✅ |
 | Scoped bus (auto-prefix) | — | ✅ |
-| Transport adapters (Redis, Kafka, WebSocket, NATS) | — | ✅ |
+| 9 adapters (HTTP, WebSocket, SSE, Socket.IO, BroadcastChannel, Redis, Kafka, NATS, RabbitMQ) | — | ✅ |
 | Runtime license key validation | — | ✅ |
 
-→ **[View PRO pricing & details](https://deslay-ai.web.app/ga-pubsub-pro)**
-→ **[PRO customer support](https://deslay-ai.web.app/ga-pubsub-pro/services)**
+→ **[View PRO pricing & details](https://deslay-ai.web.app/ga-pubsub-docs/pricing)**
+→ **[PRO customer support](https://deslay-ai.web.app/ga-pubsub-docs/services)**
 
 ---
 
@@ -208,6 +204,26 @@ If you find a bug, open an issue on GitHub. For security disclosures, contact th
 
 ---
 
+## Copy-paste local example
+
+The published package includes [`examples/usage.ts`](./examples/usage.ts). It covers typed publish/subscribe, structural wildcards, priority, one-time subscriptions, middleware, schema validation, replay, TTL, request/response, telemetry, metrics, and cleanup.
+
+```bash
+mkdir ga-pubsub-training && cd ga-pubsub-training
+npm init -y
+npm install ga-pubsub@3.1.0 tsx
+```
+
+Copy the example to `usage.ts`, then run:
+
+```bash
+npx tsx usage.ts
+```
+
+Core does not require a license, broker, or runtime dependency.
+
+---
+
 ## License
 
-**Elastic License 2.0 (ELv2)** — © 2026 [Ajithraj G](https://deslay-ai.web.app/
+**Elastic License 2.0 (ELv2)** — © 2026 Ajithraj G

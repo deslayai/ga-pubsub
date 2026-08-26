@@ -115,7 +115,7 @@ export interface ValidationError {
 }
 
 export interface Validator<T = unknown> {
-  validate(payload: unknown): ValidationResult;
+  validate(payload: unknown): ValidationResult | Promise<ValidationResult>;
   readonly name: string;
 }
 
@@ -144,6 +144,8 @@ export interface ReplayOptions {
   limit?: number;
   ttl?: number;
   replayWildcards?: boolean;
+  /** Maximum distinct event names retained. @default 1000 */
+  maxEventTypes?: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

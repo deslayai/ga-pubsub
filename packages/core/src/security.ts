@@ -17,11 +17,15 @@ import type { EventEnvelope } from './types.js';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function generateId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
+  const cryptoApi = globalThis.crypto;
+  if (cryptoApi && typeof cryptoApi.randomUUID === 'function') {
+    return cryptoApi.randomUUID();
+  }
+  if (!cryptoApi || typeof cryptoApi.getRandomValues !== 'function') {
+    throw new Error('GA-PubSub requires a Web Crypto compatible runtime.');
   }
   const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
+  cryptoApi.getRandomValues(bytes);
   bytes[6] = (bytes[6]! & 0x0f) | 0x40;
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
   const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -33,10 +37,14 @@ export function generateId(): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function sanitizePayload<T>(payload: T): T {
-  if (typeof structuredClone === 'function') {
-    try { return structuredClone(payload); } catch {}
+  if (typeof globalThis.structuredClone === 'function') {
+    try {
+      return globalThis.structuredClone(payload);
+    } catch (error) {
+      throw new TypeError(`Payload cannot be safely cloned: ${(error as Error).message}`);
+    }
   }
-  return JSON.parse(JSON.stringify(payload)) as T;
+  throw new Error('GA-PubSub requires structuredClone support to preserve payload types safely.');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,6 +52,6 @@ export function sanitizePayload<T>(payload: T): T {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function isExpired(envelope: EventEnvelope): boolean {
-  if (!envelope.ttl) return false;
-  return Date.now() > envelope.timestamp + envelope.ttl;
+  if (envelope.ttl === undefined) return false;
+  return Date.now() >= envelope.timestamp + envelope.ttl;
 }

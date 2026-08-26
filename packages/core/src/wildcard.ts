@@ -48,13 +48,23 @@ function matchSegments(
   pattern: PatternSegment[],
   pIdx: number,
   segments: string[],
-  sIdx: number
+  sIdx: number,
+  memo = new Map<string, boolean>()
 ): boolean {
+  const memoKey = `${pIdx}:${sIdx}`;
+  const memoized = memo.get(memoKey);
+  if (memoized !== undefined) return memoized;
+
+  const originalPIdx = pIdx;
+  const originalSIdx = sIdx;
   while (pIdx < pattern.length && sIdx < segments.length) {
     const seg = pattern[pIdx]!;
 
     if (seg.kind === EXACT) {
-      if (seg.value !== segments[sIdx]!) return false;
+      if (seg.value !== segments[sIdx]!) {
+        memo.set(memoKey, false);
+        return false;
+      }
       pIdx++;
       sIdx++;
       continue;
@@ -68,14 +78,19 @@ function matchSegments(
 
     // MULTI (**): try consuming 0..n segments
     for (let consumed = 0; consumed <= segments.length - sIdx; consumed++) {
-      if (matchSegments(pattern, pIdx + 1, segments, sIdx + consumed)) {
+      if (matchSegments(pattern, pIdx + 1, segments, sIdx + consumed, memo)) {
+        memo.set(`${originalPIdx}:${originalSIdx}`, true);
         return true;
       }
     }
+    memo.set(`${originalPIdx}:${originalSIdx}`, false);
     return false;
   }
 
-  return pIdx === pattern.length && sIdx === segments.length;
+  while (pIdx < pattern.length && pattern[pIdx]!.kind === MULTI) pIdx++;
+  const result = pIdx === pattern.length && sIdx === segments.length;
+  memo.set(`${originalPIdx}:${originalSIdx}`, result);
+  return result;
 }
 
 class CompiledPatternImpl implements CompiledPattern {
@@ -117,7 +132,11 @@ function evictOldest(): void {
 export const wildcardMatcher: WildcardMatcher = {
   compile(pattern: string): CompiledPattern {
     let cached = compiledCache.get(pattern);
-    if (cached) return cached;
+    if (cached) {
+      compiledCache.delete(pattern);
+      compiledCache.set(pattern, cached);
+      return cached;
+    }
 
     if (compiledCache.size >= MAX_CACHE) evictOldest();
 

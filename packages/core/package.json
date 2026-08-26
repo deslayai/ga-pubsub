@@ -1,6 +1,6 @@
 {
   "name": "ga-pubsub",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "description": "GA-PubSub Core \u2014 free pub/sub event bus for TypeScript (Elastic License 2.0)",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,13 +11,24 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
+    },
+    "./validators": {
+      "import": "./dist/validators.js",
+      "require": "./dist/validators.cjs",
+      "types": "./dist/validators.d.ts"
+    },
+    "./integrations": {
+      "import": "./dist/integrations.js",
+      "require": "./dist/integrations.cjs",
+      "types": "./dist/integrations.d.ts"
     }
   },
   "files": [
     "dist",
     "LICENSE",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "examples"
   ],
   "scripts": {
     "build": "tsc && node scripts/build-cjs.mjs",

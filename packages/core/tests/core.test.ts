@@ -48,8 +48,8 @@ describe('wildcardMatcher', () => {
     expect(wildcardMatcher.matches('a.*', 'a.b.c')).toBe(false);
   });
 
-  it('double wildcard (**) matches one or more trailing segments', () => {
-    expect(wildcardMatcher.matches('a.**', 'a')).toBe(false);      // dot separator requires at least one segment
+  it('double wildcard (**) matches zero or more trailing segments', () => {
+    expect(wildcardMatcher.matches('a.**', 'a')).toBe(true);
     expect(wildcardMatcher.matches('a.**', 'a.b')).toBe(true);
     expect(wildcardMatcher.matches('a.**', 'a.b.c.d')).toBe(true);
   });
@@ -120,7 +120,8 @@ describe('ReplayEngine', () => {
     engine.store_('user.created', env);
     const history = engine.getHistory('user.created');
     expect(history).toHaveLength(1);
-    expect(history[0]).toBe(env);
+    expect(history[0]).toStrictEqual(env);
+    expect(history[0]).not.toBe(env);
   });
 
   it('ring buffer evicts oldest when limit exceeded', () => {

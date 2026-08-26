@@ -3,7 +3,6 @@
  *
  * Provides idiomatic first-class integrations for:
  *   - React (hook)
- *   - Angular (injectable service)
  *   - Vue 3 (composable)
  *   - NestJS (module + injectable)
  *   - Express (middleware)
@@ -12,6 +11,8 @@
  * All adapters share the same underlying EventBus instance,
  * and are thin ergonomic wrappers — not re-implementations.
  */
+
+import { EventBus as EventBusClass } from './bus.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // REACT HOOK
@@ -55,19 +56,20 @@ export function createReactHook(React: {
     publish: (payload: TPayload, opts?: import('./types.js').PublishOptions) => Promise<void>;
   } {
     const [lastEnvelope, setLastEnvelope] = React.useState<import('./types.js').EventEnvelope<TPayload> | null>(null);
+    const callbackRef = React.useRef(callback);
+    callbackRef.current = callback;
 
     React.useEffect(() => {
       if (!eventName) return;
 
       const handler = (envelope: import('./types.js').EventEnvelope<TPayload>) => {
         setLastEnvelope(envelope);
-        callback?.(envelope);
+        callbackRef.current?.(envelope);
       };
 
       const handle = bus.subscribe(eventName, handler, options);
       return () => handle.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [bus, eventName]);
+    }, [bus, eventName, options]);
 
     const publish = React.useCallback(
       (...args: unknown[]) => {
@@ -176,16 +178,20 @@ export function createExpressMiddleware(
     const userId        = String(req.headers[userHeader] ?? '');
 
     // Create a request-scoped publish wrapper that pre-fills context
-    req.eventBus = {
-      ...bus,
-      publish: (eventName: string, payload: unknown, opts: import('./types.js').PublishOptions = {}) =>
+    const scopedPublish = (eventName: string, payload: unknown, opts: import('./types.js').PublishOptions = {}) =>
         bus.publish(eventName, payload, {
           ...(correlationId ? { correlationId } : {}),
           ...(tenantId      ? { tenantId }      : {}),
           ...(userId        ? { userId }        : {}),
           ...opts,
-        }),
-    } as import('./bus.js').EventBus;
+        });
+    req.eventBus = new Proxy(bus, {
+      get(target, property) {
+        if (property === 'publish') return scopedPublish;
+        const value = Reflect.get(target, property, target) as unknown;
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
 
     next();
   };
@@ -199,7 +205,7 @@ export function createExpressMiddleware(
  * Wraps a serverless function handler to:
  *   1. Initialize the event bus lazily (cold start optimization)
  *   2. Publish a lifecycle event before and after invocation
- *   3. Wait for all in-flight events to drain before returning
+ *   3. Publish completion or failure lifecycle events
  *
  * USAGE (AWS Lambda):
  *   export const handler = withEventBus(bus, async (event, context) => {
@@ -291,8 +297,7 @@ export function withServerlessHandler<TEvent = unknown, TResult = unknown>(
 export const PUBSUB_BUS = Symbol('PUBSUB_BUS');
 
 export function createNestModule(options: import('./types.js').BusOptions = {}) {
-  const { EventBus } = require('./bus.js') as typeof import('./bus.js');
-  const busInstance = new EventBus(options);
+  const busInstance = new EventBusClass(options);
 
   return {
     module: class GAPubSubModule {},

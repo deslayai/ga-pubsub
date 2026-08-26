@@ -14,25 +14,32 @@
 
 import type { EventEnvelope, ReplayOptions } from './types.js';
 import { wildcardMatcher } from './wildcard.js';
+import { isExpired, sanitizePayload } from './security.js';
 
 interface HistoryEntry {
   envelope: EventEnvelope;
   storedAt: number;
 }
 
-const DEFAULT_REPLAY_LIMIT = 10;
+const DEFAULT_REPLAY_LIMIT = 0;
 const DEFAULT_TTL = 0; // no TTL by default
+const DEFAULT_MAX_EVENT_TYPES = 1_000;
 
 export class ReplayEngine {
   private readonly store = new Map<string, HistoryEntry[]>();
   private readonly limit: number;
   private readonly ttl: number;
   private readonly replayWildcards: boolean;
+  private readonly maxEventTypes: number;
   private sweepTimer?: ReturnType<typeof setInterval>;
 
   constructor(options: ReplayOptions = {}) {
-    this.limit = options.limit ?? DEFAULT_REPLAY_LIMIT;
-    this.ttl = options.ttl ?? DEFAULT_TTL;
+    this.limit = assertNonNegativeInteger(options.limit ?? DEFAULT_REPLAY_LIMIT, 'replay.limit');
+    this.ttl = assertNonNegativeFinite(options.ttl ?? DEFAULT_TTL, 'replay.ttl');
+    this.maxEventTypes = assertPositiveInteger(
+      options.maxEventTypes ?? DEFAULT_MAX_EVENT_TYPES,
+      'replay.maxEventTypes'
+    );
     this.replayWildcards = options.replayWildcards ?? true;
 
     // Periodic sweep every 60s to prevent TTL staleness
@@ -40,7 +47,7 @@ export class ReplayEngine {
       this.sweepTimer = setInterval(() => this.sweep(), 60_000);
       // Don't block process exit in Node.js
       if (typeof this.sweepTimer === 'object' && 'unref' in this.sweepTimer) {
-        (this.sweepTimer as NodeJS.Timeout).unref?.();
+        (this.sweepTimer as { unref?: () => void }).unref?.();
       }
     }
   }
@@ -53,11 +60,15 @@ export class ReplayEngine {
     if (this.limit === 0) return; // Replay disabled
 
     if (!this.store.has(eventName)) {
+      if (this.store.size >= this.maxEventTypes) {
+        const oldest = this.store.keys().next().value;
+        if (oldest !== undefined) this.store.delete(oldest);
+      }
       this.store.set(eventName, []);
     }
 
     const entries = this.store.get(eventName)!;
-    entries.push({ envelope, storedAt: Date.now() });
+    entries.push({ envelope: sanitizePayload(envelope), storedAt: Date.now() });
 
     // Evict oldest if over limit (ring buffer behavior)
     while (entries.length > this.limit) {
@@ -80,7 +91,10 @@ export class ReplayEngine {
     } = {}
   ): EventEnvelope[] {
     const now = Date.now();
-    const cutoff = options.lastMs ? now - options.lastMs : 0;
+    const lastMs = options.lastMs === undefined
+      ? undefined
+      : assertNonNegativeFinite(options.lastMs, 'replayLastMs');
+    const cutoff = lastMs === undefined ? 0 : now - lastMs;
 
     const result: EventEnvelope[] = [];
 
@@ -91,7 +105,9 @@ export class ReplayEngine {
         const valid = this.filterEntries(entries, now, cutoff, options.filter);
         result.push(...valid);
         // Prune expired entries in-place
-        this.store.set(pattern, this.pruneExpired(entries, now));
+        const pruned = this.pruneExpired(entries, now);
+        if (pruned.length === 0) this.store.delete(pattern);
+        else this.store.set(pattern, pruned);
       }
     } else if (this.replayWildcards) {
       // Scan all stored event names matching the pattern
@@ -99,7 +115,9 @@ export class ReplayEngine {
         if (wildcardMatcher.matches(pattern, eventName)) {
           const valid = this.filterEntries(entries, now, cutoff, options.filter);
           result.push(...valid);
-          this.store.set(eventName, this.pruneExpired(entries, now));
+          const pruned = this.pruneExpired(entries, now);
+          if (pruned.length === 0) this.store.delete(eventName);
+          else this.store.set(eventName, pruned);
         }
       }
 
@@ -107,7 +125,7 @@ export class ReplayEngine {
       result.sort((a, b) => a.timestamp - b.timestamp);
     }
 
-    return result;
+    return result.map(envelope => sanitizePayload(envelope));
   }
 
   private filterEntries(
@@ -119,6 +137,7 @@ export class ReplayEngine {
     return entries
       .filter(e => {
         if (this.ttl > 0 && now - e.storedAt > this.ttl) return false;
+        if (isExpired(e.envelope)) return false;
         if (cutoff > 0 && e.envelope.timestamp < cutoff) return false;
         if (filter && !filter(e.envelope)) return false;
         return true;
@@ -170,4 +189,24 @@ export class ReplayEngine {
     }
     this.clear();
   }
+}
+
+function assertNonNegativeFinite(value: number, name: string): number {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${name} must be a finite number >= 0`);
+  }
+  return value;
+}
+
+function assertNonNegativeInteger(value: number, name: string): number {
+  assertNonNegativeFinite(value, name);
+  if (!Number.isInteger(value)) throw new RangeError(`${name} must be an integer`);
+  return value;
+}
+
+function assertPositiveInteger(value: number, name: string): number {
+  if (!Number.isInteger(value) || value < 1) {
+    throw new RangeError(`${name} must be an integer >= 1`);
+  }
+  return value;
 }

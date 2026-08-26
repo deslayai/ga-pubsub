@@ -15,7 +15,7 @@
  *   🔒 Transport adapters (Redis, Kafka, WebSocket, NATS, RabbitMQ)
  *
  * @module ga-pubsub
- * @version 1.0.0
+ * @version 3.1.0
  */
 
 // ─── Primary Classes ──────────────────────────────────────────────────────────
@@ -34,6 +34,8 @@ export { wildcardMatcher, SubscriptionIndex } from './wildcard.js';
 
 // ─── Metrics ──────────────────────────────────────────────────────────────────
 export { MetricsCollector, TelemetryDispatcher } from './metrics.js';
+export * from './validators.js';
+export * from './integrations.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type {

@@ -96,11 +96,18 @@ export class EventBus {
   protected readonly pendingRequests = new Map<string, {
     resolve: (envelope: EventEnvelope) => void;
     reject: (error: Error) => void;
+    expectedResponseEvent: string;
     timer?: ReturnType<typeof setTimeout>;
   }>();
 
+  private readonly responderEvents = new Set<string>();
+  private readonly recentEnvelopeIds = new Map<string, number>();
+  private destroyed = false;
+
   constructor(options: BusOptions = {}) {
     this.namespace = options.namespace ?? 'default';
+    assertName(this.namespace, 'namespace', false, 128);
+    assertNonNegativeInteger(options.maxSubscriptions ?? 0, 'maxSubscriptions');
     this.opts = {
       enableWildcard: true,
       maxSubscriptions: 0,
@@ -140,6 +147,7 @@ export class EventBus {
   // ─── Middleware ────────────────────────────────────────────────────────────
 
   use<T = unknown>(fn: MiddlewareFn<T>): this {
+    this.assertActive();
     if (typeof fn !== 'function') throw new TypeError('Middleware must be a function');
     this.middlewares.push(fn as MiddlewareFn);
     return this;
@@ -148,6 +156,11 @@ export class EventBus {
   // ─── Schema Validation ────────────────────────────────────────────────────
 
   registerSchema<T = unknown>(eventName: string, validator: Validator<T>): this {
+    this.assertActive();
+    assertName(eventName, 'event pattern', this.opts.enableWildcard);
+    if (!validator || typeof validator.validate !== 'function') {
+      throw new TypeError('Validator must expose a validate function');
+    }
     this.validators.set(eventName, validator as Validator);
     return this;
   }
@@ -159,7 +172,19 @@ export class EventBus {
     callback: SubscriberCallback<T>,
     options: SubscriberOptions = {}
   ): SubscriptionHandle {
+    this.assertActive();
+    assertName(eventName, 'event pattern', this.opts.enableWildcard);
     if (typeof callback !== 'function') throw new TypeError('Callback must be a function');
+    const priority = options.priority ?? 0;
+    if (!Number.isFinite(priority)) throw new RangeError('Subscriber priority must be finite');
+
+    // Resolve replay before registration so a throwing filter cannot leak a subscription.
+    const history = options.replay === false
+      ? []
+      : this.replay.getHistory(eventName, {
+          ...(options.replayLastMs !== undefined && { lastMs: options.replayLastMs }),
+          ...(options.replayFilter !== undefined && { filter: options.replayFilter }),
+        });
 
     if (this.opts.maxSubscriptions > 0 && this.subscribers.size >= this.opts.maxSubscriptions) {
       throw new SubscriptionLimitError(this.opts.maxSubscriptions);
@@ -171,7 +196,7 @@ export class EventBus {
       eventPattern: eventName,
       callback,
       once: options.once ?? false,
-      priority: options.priority ?? 0,
+      priority,
       ...(options.authContext !== undefined && { authContext: options.authContext }),
     };
 
@@ -182,24 +207,22 @@ export class EventBus {
     this.telemetry.onSubscribe(id, eventName);
 
     // Replay historical events to this subscriber
-    if (options.replay !== false) {
-      const history = this.replay.getHistory(eventName, {
-        ...(options.replayLastMs !== undefined && { lastMs: options.replayLastMs }),
-        ...(options.replayFilter !== undefined && { filter: options.replayFilter }),
-      });
-      if (history.length > 0) {
-        this.metrics.recordReplay(history.length);
-        this.telemetry.onReplay(eventName, history.length);
-        for (const envelope of history) {
+    if (history.length > 0) {
+        const replayItems = record.once ? history.slice(0, 1) : history;
+        this.metrics.recordReplay(replayItems.length);
+        this.telemetry.onReplay(eventName, replayItems.length);
+        for (const envelope of replayItems) {
           Promise.resolve().then(async () => {
+            if (!this.subscribers.has(id)) return;
+            if (record.once) this.unsubscribe(eventName, id);
             try {
               await Promise.resolve(callback(envelope as EventEnvelope<T>));
             } catch (err) {
+              this.metrics.recordFailedDelivery();
               this.handleError(err as Error, { phase: 'replay', eventName, subscriberId: id, envelope });
             }
           });
         }
-      }
     }
 
     const bus = this;
@@ -221,8 +244,9 @@ export class EventBus {
   unsubscribe(eventName: string, subscriberId: string): boolean {
     const record = this.subscribers.get(subscriberId);
     if (!record) return false;
+    if (record.eventPattern !== eventName) return false;
     this.subscribers.delete(subscriberId);
-    this.index.remove(eventName, subscriberId);
+    this.index.remove(record.eventPattern, subscriberId);
     this.metrics.recordUnsubscribe();
     this.metrics.activeSubscriptions = this.subscribers.size;
     this.telemetry.onUnsubscribe(subscriberId, eventName);
@@ -230,6 +254,10 @@ export class EventBus {
   }
 
   unsubscribeAll(): void {
+    for (const record of this.subscribers.values()) {
+      this.metrics.recordUnsubscribe();
+      this.telemetry.onUnsubscribe(record.id, record.eventPattern);
+    }
     this.subscribers.clear();
     this.index.clear();
     this.metrics.activeSubscriptions = 0;
@@ -242,6 +270,9 @@ export class EventBus {
     payload: T,
     options: PublishOptions = {}
   ): Promise<void> {
+    this.assertActive();
+    assertName(eventName, 'event name', false);
+    validatePublishOptions(options);
     const startMs = Date.now();
 
     // Build envelope
@@ -259,23 +290,26 @@ export class EventBus {
       ...(tenantId !== undefined && { tenantId }),
       ...(options.userId !== undefined && { userId: options.userId }),
       ...(options.ttl !== undefined && { ttl: options.ttl }),
-      ...(options.metadata !== undefined && { metadata: options.metadata }),
+      ...(options.metadata !== undefined && { metadata: sanitizePayload(options.metadata) }),
     };
 
     // Schema validation runs first (cheap, early exit before auth)
     await this.validateEnvelope(envelope);
 
+    // Prevent broker self-echo from delivering the same envelope twice.
+    this.rememberEnvelopeId(envelope.id);
+
     // PRO hook: rate limit, payload size, signing, authorization
     await this.onBeforePublish(envelope);
 
-    // Store in replay history
+    // Run middleware + dispatch to subscribers
+    await this.runMiddlewareAndDispatch(envelope);
+
+    // Store only successfully processed events.
     if (options.storeHistory !== false) {
       this.replay.store_(eventName, envelope);
       this.metrics.historySize = this.replay.size;
     }
-
-    // Run middleware + dispatch to subscribers
-    await this.runMiddlewareAndDispatch(envelope);
 
     // Record metrics
     const latencyMs = Date.now() - startMs;
@@ -285,46 +319,90 @@ export class EventBus {
 
   // ─── Middleware pipeline ──────────────────────────────────────────────────
 
-  private async runMiddlewareAndDispatch(envelope: EventEnvelope): Promise<void> {
+  private async runMiddlewareAndDispatch(
+    envelope: EventEnvelope,
+    local = true,
+    dispatchPrechecked = false
+  ): Promise<void> {
     const middlewares = this.middlewares;
-    let idx = 0;
+    let lastIndex = -1;
+    let reported = false;
 
-    const next = async (): Promise<void> => {
-      if (idx >= middlewares.length) {
-        await this.dispatchToSubscribers(envelope, true);
+    const dispatch = async (index: number): Promise<void> => {
+      if (index <= lastIndex) throw new Error('Middleware next() called more than once');
+      lastIndex = index;
+      if (index >= middlewares.length) {
+        await this.dispatchToSubscribers(envelope, local, dispatchPrechecked);
         return;
       }
-      const mw = middlewares[idx++]!;
+      const mw = middlewares[index]!;
       try {
-        await Promise.resolve(mw(envelope, next));
+        await Promise.resolve(mw(envelope, () => dispatch(index + 1)));
       } catch (err) {
         if (err instanceof MiddlewareAbortError) throw err;
-        this.metrics.recordMiddlewareRejection();
-        this.telemetry.onMiddlewareRejection(envelope.event, (err as Error).message);
-        this.handleError(err as Error, { phase: 'middleware', eventName: envelope.event, envelope });
+        if (!reported && !(err instanceof AggregateError)) {
+          reported = true;
+          this.metrics.recordMiddlewareRejection();
+          this.telemetry.onMiddlewareRejection(envelope.event, (err as Error).message);
+          this.handleError(err as Error, { phase: 'middleware', eventName: envelope.event, envelope });
+        }
         throw err;
       }
     };
 
-    await next();
+    await dispatch(0);
+  }
+
+  /** Validates and processes an envelope received from a transport. */
+  protected async processInboundEnvelope(input: EventEnvelope): Promise<void> {
+    this.assertActive();
+    if (!input || typeof input !== 'object') throw new TypeError('Inbound envelope must be an object');
+    const envelope = sanitizePayload(input);
+    assertName(envelope.event, 'event name', false);
+    if (envelope.namespace !== this.namespace) {
+      throw new GAPubSubError(
+        `Inbound namespace mismatch: expected "${this.namespace}", got "${envelope.namespace}"`,
+        'NAMESPACE_MISMATCH'
+      );
+    }
+    if (this.recentEnvelopeIds.has(envelope.id)) return;
+    this.rememberEnvelopeId(envelope.id);
+    try {
+      await this.onBeforeDispatch(envelope, false);
+      await this.validateEnvelope(envelope);
+      await this.runMiddlewareAndDispatch(envelope, false, true);
+      this.replay.store_(envelope.event, envelope);
+      this.metrics.historySize = this.replay.size;
+      this.metrics.recordPublish(0);
+      this.telemetry.onPublish(envelope, 0);
+    } catch (error) {
+      this.recentEnvelopeIds.delete(envelope.id);
+      throw error;
+    }
   }
 
   // ─── Dispatch to subscribers ──────────────────────────────────────────────
 
   protected async dispatchToSubscribers(
     envelope: EventEnvelope,
-    local: boolean
+    local: boolean,
+    prechecked = false
   ): Promise<void> {
     // PRO hook: signature verify, replay attack check
-    try {
-      await this.onBeforeDispatch(envelope, local);
-    } catch (err) {
-      this.handleError(err as Error, { phase: 'transport', eventName: envelope.event, envelope });
-      return;
+    if (!prechecked) {
+      try {
+        await this.onBeforeDispatch(envelope, local);
+      } catch (err) {
+        this.handleError(err as Error, { phase: 'transport', eventName: envelope.event, envelope });
+        throw err;
+      }
     }
 
     // TTL check — expired events are silently dropped
-    if (!local && isExpired(envelope)) return;
+    if (isExpired(envelope)) return;
+
+    // Resolve RPC before unrelated subscribers can delay the response.
+    this.resolveRequest(envelope);
 
     // Collect matching subscribers
     const matchMap = this.index.getMatching(envelope.event);
@@ -338,13 +416,13 @@ export class EventBus {
     }
 
     if (candidates.length === 0) {
-      this.resolveRequest(envelope);
       return;
     }
 
     // Priority ordering (descending)
     candidates.sort((a, b) => b.record.priority - a.record.priority);
 
+    const deliveryErrors: Error[] = [];
     for (const { record, pattern } of candidates) {
       // Auto-unsubscribe once-subscribers
       if (record.once) this.unsubscribe(pattern, record.id);
@@ -352,6 +430,7 @@ export class EventBus {
       try {
         await Promise.resolve(record.callback(envelope));
       } catch (err) {
+        deliveryErrors.push(err as Error);
         this.metrics.recordFailedDelivery();
         this.handleError(err as Error, {
           phase: 'subscriber',
@@ -362,24 +441,29 @@ export class EventBus {
       }
     }
 
-    this.resolveRequest(envelope);
+    if (deliveryErrors.length > 0) {
+      throw new AggregateError(deliveryErrors, `One or more subscribers failed for "${envelope.event}"`);
+    }
   }
 
   // ─── Validation ───────────────────────────────────────────────────────────
 
   private async validateEnvelope(envelope: EventEnvelope): Promise<void> {
     let validator = this.validators.get(envelope.event);
+    let selectedPattern = envelope.event;
     if (!validator) {
       for (const [pattern, v] of this.validators.entries()) {
         if (pattern.includes('*') && this.matchesPattern(pattern, envelope.event)) {
-          validator = v;
-          break;
+          if (!validator || validatorSpecificity(pattern) > validatorSpecificity(selectedPattern)) {
+            validator = v;
+            selectedPattern = pattern;
+          }
         }
       }
     }
     if (!validator) return;
 
-    const result = validator.validate(envelope.payload);
+    const result = await Promise.resolve(validator.validate(envelope.payload));
     if (!result.valid) {
       this.metrics.recordValidationFailure();
       this.telemetry.onValidationFailure(envelope.event, result.errors);
@@ -399,8 +483,13 @@ export class EventBus {
     payload: TReq,
     options: RequestOptions = {}
   ): RequestHandle<TRes> {
+    this.assertActive();
+    assertName(eventName, 'request event name', false);
     const correlationId = generateId();
     const timeoutMs = options.timeoutMs ?? 30_000;
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      throw new RangeError('timeoutMs must be a finite number > 0');
+    }
     let cancelled = false;
     let resolveHandle!: (envelope: EventEnvelope<TRes>) => void;
     let rejectHandle!: (error: Error) => void;
@@ -413,6 +502,7 @@ export class EventBus {
     this.pendingRequests.set(correlationId, {
       resolve: resolveHandle as (e: EventEnvelope) => void,
       reject: rejectHandle,
+      expectedResponseEvent: `${eventName}.__response__.${correlationId}`,
       timer: setTimeout(() => {
         if (cancelled) return;
         this.pendingRequests.delete(correlationId);
@@ -422,7 +512,17 @@ export class EventBus {
     });
 
     this.metrics.recordRequest();
-    void this.publish(`${eventName}.__request__`, payload, { ...options, correlationId }).catch(rejectHandle);
+    void this.publish(`${eventName}.__request__`, payload, {
+      ...options,
+      correlationId,
+      storeHistory: false,
+    }).catch(error => {
+      const pending = this.pendingRequests.get(correlationId);
+      if (!pending) return;
+      if (pending.timer) clearTimeout(pending.timer);
+      this.pendingRequests.delete(correlationId);
+      pending.reject(error as Error);
+    });
 
     const self = this;
     return {
@@ -443,8 +543,15 @@ export class EventBus {
     eventName: string,
     handler: ResponderFn<TReq, TRes>
   ): SubscriptionHandle {
-    return this.subscribe<TReq>(
-      `${eventName}.__request__`,
+    this.assertActive();
+    assertName(eventName, 'response event name', false);
+    if (this.responderEvents.has(eventName)) {
+      throw new GAPubSubError(`A responder is already registered for "${eventName}"`, 'RESPONDER_EXISTS');
+    }
+    this.responderEvents.add(eventName);
+    const requestEvent = `${eventName}.__request__`;
+    const handle = this.subscribe<TReq>(
+      requestEvent,
       async (requestEnvelope) => {
         try {
           const result = await Promise.resolve(handler(requestEnvelope));
@@ -459,9 +566,32 @@ export class EventBus {
             eventName: `${eventName}.__request__`,
             envelope: requestEnvelope,
           });
+          await this.publish(
+            `${eventName}.__response__.${requestEnvelope.correlationId}`,
+            undefined,
+            {
+              correlationId: requestEnvelope.correlationId,
+              causationId: requestEnvelope.id,
+              storeHistory: false,
+              metadata: {
+                rpcError: {
+                  code: err instanceof GAPubSubError ? err.code : 'RESPONDER_FAILED',
+                  message: (err as Error).message,
+                },
+              },
+            }
+          );
         }
-      }
+      },
+      { replay: false }
     );
+    return {
+      ...handle,
+      unsubscribe: () => {
+        handle.unsubscribe();
+        this.responderEvents.delete(eventName);
+      },
+    };
   }
 
   private resolveRequest(envelope: EventEnvelope): void {
@@ -470,9 +600,19 @@ export class EventBus {
     const correlationId = match[1]!;
     const pending = this.pendingRequests.get(correlationId);
     if (!pending) return;
+    if (envelope.event !== pending.expectedResponseEvent) return;
     this.pendingRequests.delete(correlationId);
     if (pending.timer) clearTimeout(pending.timer);
-    pending.resolve(envelope);
+    const rpcError = envelope.metadata?.['rpcError'];
+    if (rpcError && typeof rpcError === 'object') {
+      const value = rpcError as { code?: unknown; message?: unknown };
+      pending.reject(new GAPubSubError(
+        typeof value.message === 'string' ? value.message : 'Remote responder failed',
+        typeof value.code === 'string' ? value.code : 'RESPONDER_FAILED'
+      ));
+    } else {
+      pending.resolve(envelope);
+    }
   }
 
   // ─── Introspection ────────────────────────────────────────────────────────
@@ -486,7 +626,9 @@ export class EventBus {
   getSubscriberCount(eventName: string): number {
     const ids = this.index.getMatching(eventName);
     let count = 0;
-    for (const set of ids.values()) count += set.size;
+    for (const set of ids.values()) {
+      for (const id of set) if (this.subscribers.has(id)) count++;
+    }
     return count;
   }
 
@@ -512,9 +654,13 @@ export class EventBus {
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   async destroy(): Promise<void> {
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.unsubscribeAll();
     this.middlewares.length = 0;
     this.validators.clear();
+    this.responderEvents.clear();
+    this.recentEnvelopeIds.clear();
     this.replay.destroy();
 
     for (const pending of this.pendingRequests.values()) {
@@ -523,4 +669,58 @@ export class EventBus {
     }
     this.pendingRequests.clear();
   }
+
+  private assertActive(): void {
+    if (this.destroyed) throw new GAPubSubError('Bus has been destroyed', 'BUS_DESTROYED');
+  }
+
+  private rememberEnvelopeId(id: string): void {
+    if (typeof id !== 'string' || id.length === 0 || id.length > 128) {
+      throw new TypeError('Envelope id must be a non-empty string of at most 128 characters');
+    }
+    if (this.recentEnvelopeIds.size >= 10_000) {
+      const oldest = this.recentEnvelopeIds.keys().next().value;
+      if (oldest !== undefined) this.recentEnvelopeIds.delete(oldest);
+    }
+    this.recentEnvelopeIds.set(id, Date.now());
+  }
+}
+
+function assertName(value: string, label: string, allowWildcards: boolean, maxLength = 512): void {
+  if (typeof value !== 'string' || value.length === 0 || value.length > maxLength) {
+    throw new TypeError(`${label} must be a non-empty string of at most ${maxLength} characters`);
+  }
+  const segments = value.split('.');
+  if (segments.some(segment => segment.length === 0)) throw new TypeError(`${label} cannot contain empty segments`);
+  for (const segment of segments) {
+    if (segment.includes('*') && (!allowWildcards || (segment !== '*' && segment !== '**'))) {
+      throw new TypeError(`${label} contains an invalid wildcard segment`);
+    }
+  }
+}
+
+function assertNonNegativeInteger(value: number, label: string): void {
+  if (!Number.isInteger(value) || value < 0) throw new RangeError(`${label} must be an integer >= 0`);
+}
+
+function validatePublishOptions(options: PublishOptions): void {
+  if (options.ttl !== undefined && (!Number.isFinite(options.ttl) || options.ttl <= 0)) {
+    throw new RangeError('ttl must be a finite number > 0');
+  }
+  for (const [label, value] of [
+    ['correlationId', options.correlationId],
+    ['causationId', options.causationId],
+    ['source', options.source],
+    ['version', options.version],
+    ['tenantId', options.tenantId],
+    ['userId', options.userId],
+  ] as const) {
+    if (value !== undefined && (typeof value !== 'string' || value.length > 256)) {
+      throw new TypeError(`${label} must be a string of at most 256 characters`);
+    }
+  }
+}
+
+function validatorSpecificity(pattern: string): number {
+  return pattern.split('.').reduce((score, segment) => score + (segment === '**' ? 0 : segment === '*' ? 1 : 4), 0);
 }

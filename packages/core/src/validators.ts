@@ -24,7 +24,7 @@
  *       orderId: { type: 'string' },
  *       amount:  { type: 'number', minimum: 0 },
  *     }
- *   }));
+ *   }, ajv));
  *
  *   // Custom
  *   bus.registerSchema('internal.tick', customValidator('Tick', (payload) => {
@@ -166,7 +166,7 @@ export function customValidator<T = unknown>(
 
 /** Minimal interface for Valibot schemas */
 interface ValibotSchemaLike {
-  _parse(input: unknown): {
+  safeParse?(input: unknown): {
     typed: boolean;
     output?: unknown;
     issues?: Array<{ path?: Array<{ key: string | number }>; message: string }>;
@@ -183,7 +183,10 @@ export function valibotValidator<T = unknown>(
   return {
     name,
     validate(payload: unknown): ValidationResult {
-      const result = schema._parse(payload);
+      if (!schema.safeParse) {
+        throw new TypeError('Valibot adapter requires a schema exposing safeParse(input)');
+      }
+      const result = schema.safeParse(payload);
       if (result.typed && !result.issues?.length) return { valid: true };
 
       const errors: ValidationError[] = (result.issues ?? []).map(issue => ({
@@ -210,10 +213,10 @@ export function andValidator<T = unknown>(
 ): Validator<T> {
   return {
     name,
-    validate(payload: unknown): ValidationResult {
+    async validate(payload: unknown): Promise<ValidationResult> {
       const allErrors: ValidationError[] = [];
       for (const v of validators) {
-        const result = v.validate(payload);
+        const result = await v.validate(payload);
         if (!result.valid) allErrors.push(...result.errors);
       }
       return allErrors.length
@@ -233,9 +236,9 @@ export function orValidator<T = unknown>(
 ): Validator<T> {
   return {
     name,
-    validate(payload: unknown): ValidationResult {
+    async validate(payload: unknown): Promise<ValidationResult> {
       for (const v of validators) {
-        const result = v.validate(payload);
+        const result = await v.validate(payload);
         if (result.valid) return { valid: true };
       }
       return {
