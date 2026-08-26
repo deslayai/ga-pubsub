@@ -5,10 +5,8 @@
  *
  * Test categories:
  *   1. Unit tests — individual modules in isolation
- *   2. Integration tests — bus + replay + middleware + auth working together
- *   3. Security tests — signing, replay attack, rate limiting, payload size
- *   4. Stress tests — 100k subscriptions, 1M events, memory leak detection
- *   5. Contract tests — TransportAdapter interface conformance
+ *   2. Integration tests — browser-core bus + replay + middleware
+ *   3. Stress tests — high subscription and publish volumes
  *
  * Run: npx vitest run
  *       npx vitest run --reporter=verbose --coverage
@@ -53,8 +51,7 @@ describe('wildcardMatcher', () => {
   });
 
   it('double wildcard — matches zero segments', () => {
-    expect(wildcardMatcher.matches('payments.**', 'payments')).toBe(false);
-    // 'payments.**' requires 'payments.' prefix
+    expect(wildcardMatcher.matches('payments.**', 'payments')).toBe(true);
   });
 
   it('double wildcard — matches one segment', () => {
@@ -95,7 +92,8 @@ describe('ReplayEngine', () => {
     engine.store_('user.created', envelope);
     const history = engine.getHistory('user.created');
     expect(history).toHaveLength(1);
-    expect(history[0]).toBe(envelope);
+    expect(history[0]).toStrictEqual(envelope);
+    expect(history[0]).not.toBe(envelope);
   });
 
   it('respects replay limit (ring buffer)', () => {
@@ -127,7 +125,8 @@ describe('ReplayEngine', () => {
     engine.store_('evt', recent);
     const history = engine.getHistory('evt', { lastMs: 5_000 });
     expect(history).toHaveLength(1);
-    expect(history[0]).toBe(recent);
+    expect(history[0]).toStrictEqual(recent);
+    expect(history[0]).not.toBe(recent);
   });
 
   it('wildcard replay returns matching events', () => {

@@ -2,7 +2,7 @@
 
 # GA-PubSub Core
 
-**A lightweight, zero-dependency pub/sub event bus for TypeScript — browser, Node.js, and edge runtimes.**
+**A lightweight, zero-dependency, in-memory pub/sub event bus for browser TypeScript applications.**
 
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
@@ -16,9 +16,9 @@
 
 ## What is GA-PubSub?
 
-GA-PubSub is a publish/subscribe event bus built for modern TypeScript projects. It works the same way in a React SPA, a Node.js microservice, a Cloudflare Worker, or a Deno edge function — no adapter needed.
+GA-PubSub is a publish/subscribe event bus for browser applications. Events remain in the current page's memory and are delivered only to subscribers attached to that in-memory bus instance.
 
-The core package is available under the Elastic License 2.0 (ELv2). [PRO](https://deslay-ai.web.app/ga-pubsub-docs/pricing) adds HMAC signing, independent inbound/outbound rate limits, authorization, replay-attack prevention, multi-tenancy, and nine transport adapters.
+The core package is available under the Elastic License 2.0 (ELv2). It does not provide backend execution, cross-process delivery, external transports, or commercial security features. [PRO](https://deslay-ai.web.app/ga-pubsub-docs/pricing) adds frontend and backend operation, HMAC signing, independent inbound/outbound rate limits, authorization, replay-attack prevention, multi-tenancy, and nine transport adapters.
 
 ---
 
@@ -31,8 +31,8 @@ The core package is available under the Elastic License 2.0 (ELv2). [PRO](https:
 - **Schema validation** — register a validator per event name; invalid payloads are rejected
 - **Request / Response (RPC)** — `bus.request()` + `bus.respond()` with configurable timeout
 - **Replay engine** — late subscribers receive previously published events (ring-buffer, wildcard-aware)
-- **TTL enforcement** — expired local, replayed, and transported envelopes are dropped before subscriber delivery
-- **Metrics** — built-in counters for publishes, deliveries, failures, auth denials, and p95 latency
+- **TTL enforcement** — expired local and replayed envelopes are dropped before subscriber delivery
+- **Metrics** — built-in counters for publishes, deliveries, failures, and p95 latency
 - **Subscription limit** — optional cap to prevent runaway listeners
 - **Cancel in-flight requests** — `handle.cancel()` rejects the response promise immediately
 - **Zero dependencies** — pure TypeScript, ships as ESM + CJS dual build
@@ -172,11 +172,12 @@ bus.subscribe('app.*', (e) => {
 
 ## PRO Edition
 
-The free core is intentionally lean. For licensed security and external transports, see [PRO pricing](https://deslay-ai.web.app/ga-pubsub-docs/pricing):
+The free core is intentionally browser-only and in-memory. For licensed frontend/backend operation, security, and external transports, see [PRO pricing](https://deslay-ai.web.app/ga-pubsub-docs/pricing):
 
 | Feature | Core | PRO |
 |---------|:----:|:---:|
-| Pub / Sub, wildcards, priority | ✅ | ✅ |
+| Browser in-memory pub/sub, wildcards, priority | ✅ | ✅ |
+| Backend runtime support | — | ✅ |
 | Middleware, schema validation | ✅ | ✅ |
 | Replay engine, RPC, metrics | ✅ | ✅ |
 | HMAC envelope signing | — | ✅ |
@@ -204,23 +205,19 @@ If you find a bug, open an issue on GitHub. For security disclosures, contact th
 
 ---
 
-## Copy-paste local example
+## Copy-paste browser example
 
 The published package includes [`examples/usage.ts`](./examples/usage.ts). It covers typed publish/subscribe, structural wildcards, priority, one-time subscriptions, middleware, schema validation, replay, TTL, request/response, telemetry, metrics, and cleanup.
 
 ```bash
-mkdir ga-pubsub-training && cd ga-pubsub-training
-npm init -y
-npm install ga-pubsub@3.1.0 tsx
+npm create vite@latest ga-pubsub-training -- --template vanilla-ts
+cd ga-pubsub-training
+npm install
+npm install ga-pubsub@3.1.0
+npm run dev
 ```
 
-Copy the example to `usage.ts`, then run:
-
-```bash
-npx tsx usage.ts
-```
-
-Core does not require a license, broker, or runtime dependency.
+Copy the package example into the Vite application's `src/usage.ts`, import it from `src/main.ts`, and open the local URL printed by Vite. Core does not require a license or broker; all events remain inside the browser page's memory.
 
 ---
 

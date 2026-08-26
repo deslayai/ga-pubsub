@@ -1,556 +1,95 @@
 <div align="center">
 
-# GA-PubSub
+# GA-PubSub Core
 
-**Enterprise-grade, security-first, transport-agnostic eventing platform for JavaScript & TypeScript.**
+**Free, browser-only, in-memory pub/sub for TypeScript applications.**
 
-[![CI](https://github.com/deslayai/ga-pubsub/actions/workflows/ci.yml/badge.svg)](https://github.com/deslayai/ga-pubsub/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/ga-pubsub?color=blue)](https://www.npmjs.com/package/ga-pubsub)
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)](./LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4%2B-blue)](https://www.typescriptlang.org)
 
-[📖 Documentation](https://deslay-ai.web.app/ga-pubsub-docs/reference) · [🚀 Live Demo](https://deslayai.github.io/ga-pubsub/) · [💼 GA-PubSub Pro](https://deslay-ai.web.app/ga-pubsub-pro)
+[Documentation](https://deslay-ai.web.app/ga-pubsub-docs/reference) · [Live Demo](https://deslayai.github.io/ga-pubsub/) · [GA-PubSub PRO](https://deslay-ai.web.app/ga-pubsub-docs/pricing)
 
 </div>
 
 ---
 
-## Overview
+## Product boundary
 
-GA-PubSub combines the simplicity of in-process pub/sub with the extensibility of enterprise messaging — without the operational complexity. The same API works in a React component, a NestJS service, an AWS Lambda, and a Cloudflare Worker.
+This repository publishes one product package:
 
-```
-Browser ──┐
-React   ──┤
-Angular ──┤               ┌──────────────────────────────┐
-Vue     ──┼──► bus.publish │                              │──► Memory (default)
-Node.js ──┤   bus.subscribe│     GA-PubSub Core           │──► WebSocket
-Express ──┤   bus.request  │   EventBus · Middleware       │──► SSE
-NestJS  ──┤   bus.respond  │   Replay · Auth · Schema     │──► BroadcastChannel
-Serverless┤               │   Security · Metrics          │──► Redis
-Edge    ──┘               └──────────────────────────────┘──► Kafka / NATS
-```
+| Package | License | Supported runtime | Delivery model |
+|---------|---------|-------------------|----------------|
+| [`ga-pubsub`](./packages/core) | Elastic License 2.0 | Browser | In-memory, within the current page |
 
----
+`ga-pubsub` does not provide backend runtime support, network transports, broker integrations, HMAC signing, authorization, rate limiting, multi-tenancy, or commercial licensing.
 
-## Packages
+Those capabilities belong exclusively to the separately licensed commercial suite:
 
-| Package | Description | Runtime |
-|---------|-------------|---------|
-| [`ga-pubsub`](./packages/core) | Core engine — zero runtime deps | Browser + Node.js + Edge |
-| [`@ga-pubsub/websocket`](./packages/websocket) | WebSocket transport (client + server) | Browser + Node.js |
-| [`@ga-pubsub/sse`](./packages/sse) | Server-Sent Events transport | Browser + Node.js |
-| [`@ga-pubsub/broadcast-channel`](./packages/broadcast-channel) | Cross-tab BroadcastChannel transport | Browser |
-| [`@ga-pubsub/redis`](./packages/redis) | Redis Pub/Sub + Streams transport | Node.js |
-| [`@ga-pubsub/kafka`](./packages/kafka) | Apache Kafka transport | Node.js |
-| [`@ga-pubsub/nats`](./packages/nats) | NATS Core + JetStream transport | Node.js |
+- `@deslayai/ga-pubsub-pro` — paid frontend/backend runtime built on `ga-pubsub`.
+- Nine paid `@deslayai/ga-pubsub-*` adapters — HTTP, WebSocket, SSE, Socket.IO, BroadcastChannel, Redis, Kafka, NATS, and RabbitMQ.
 
----
+The historical `packages/*` transport directories are not npm workspaces, are not part of the free package build, and must not be documented or published as core features. The maintained adapters live in their separate PRO repositories.
 
-## Quick Start
+## Installation
 
 ```bash
 npm install ga-pubsub
 ```
 
+## Browser usage
+
 ```typescript
-import { getBus } from 'ga-pubsub';
+import { EventBus } from 'ga-pubsub';
 
-const bus = getBus('myapp', {
-  replay: { limit: 10, ttl: 60_000 },
-  maxPayloadBytes: 65_536,
-  enableSigning: true,
-  signingSecret: process.env.PUBSUB_SECRET,
+const bus = new EventBus({ namespace: 'storefront' });
+
+bus.subscribe('cart.*', envelope => {
+  console.log(envelope.event, envelope.payload);
 });
 
-// Subscribe
-bus.subscribe('user.*', (envelope) => {
-  console.log(`User event: ${envelope.event}`, envelope.payload);
-});
-
-// Publish
-await bus.publish('user.created', {
-  id: 'usr_123',
-  email: 'alice@example.com',
+await bus.publish('cart.updated', {
+  productId: 'prod_42',
+  quantity: 2,
 });
 ```
 
----
+The event is delivered only inside the browser page containing this bus instance. Refreshing or closing the page clears its in-memory state.
 
-## Core Concepts
+## Included free features
 
-### Event Envelope
+- Exact and wildcard publish/subscribe
+- Priority subscribers and one-time subscriptions
+- Middleware and schema validation
+- In-memory replay and TTL enforcement
+- Request/response within the same browser runtime
+- Metrics, telemetry hooks, and subscription limits
+- ESM and CommonJS package outputs with zero runtime dependencies
 
-Every event is wrapped in a standardized, signed envelope:
+## Not included in core
 
-```typescript
-{
-  id:            "a1b2c3d4-...",     // Unique event ID (UUIDv4)
-  event:         "payments.invoice.created",
-  namespace:     "tenant-a",
-  payload:       { invoiceId: "inv_123", amount: 999 },
-  timestamp:     1700000000000,
-  correlationId: "f9e8d7c6-...",    // Business flow ID
-  causationId:   "e1d2c3b4-...",    // Parent event ID
-  source:        "billing-service",
-  version:       "1",
-  tenantId:      "tenant-a",
-  signature:     "a3f9b2...",        // HMAC-SHA256 (when signing enabled)
-  sequence:      42,                 // Monotonic — replay attack prevention
-}
-```
+- Backend or server runtime support
+- Cross-tab, cross-process, or cross-service delivery
+- HTTP, WebSocket, SSE, Socket.IO, BroadcastChannel, Redis, Kafka, NATS, or RabbitMQ transports
+- HMAC signing, replay-attack prevention, authorization, rate limiting, or tenant registry
+- A commercial production license
 
-### Wildcard Subscriptions
+Use [GA-PubSub PRO](https://deslay-ai.web.app/ga-pubsub-docs/pricing) when any of these capabilities are required.
 
-```typescript
-bus.subscribe('user.*',      handler); // ONE segment:  user.created, user.deleted
-bus.subscribe('payments.**', handler); // ANY depth:    payments.invoice.created.retry
-bus.subscribe('**',          handler); // ALL events in namespace
-```
-
-### Middleware Pipeline
-
-```typescript
-bus.use(ttlGuardMiddleware());                     // Drop expired events
-bus.use(loggingMiddleware({ level: 'debug' }));    // Log all events
-bus.use(timestampMiddleware());                    // Record processing time
-
-// Custom middleware
-bus.use(async (envelope, next) => {
-  envelope.metadata = { ...envelope.metadata, region: 'us-east-1' };
-  await next(); // Call next to continue; omit to abort
-});
-```
-
-### Schema Validation
-
-```typescript
-import { zodValidator } from 'ga-pubsub/validators';
-import { z } from 'zod';
-
-const UserCreatedSchema = z.object({
-  id:    z.string().uuid(),
-  email: z.string().email(),
-  role:  z.enum(['admin', 'user', 'guest']),
-});
-
-bus.registerSchema('user.created', zodValidator('UserCreated', UserCreatedSchema));
-
-// Validation failures throw ValidationFailedError BEFORE dispatch
-await bus.publish('user.created', { id: 'not-a-uuid', email: 'bad' });
-// throws: ValidationFailedError: [invalid_string] Invalid uuid, [invalid_string] Invalid email
-```
-
-### Authorization
-
-```typescript
-bus.authorize('payment.**', async (envelope, ctx) => {
-  return ctx.roles?.includes('finance') ?? false;
-});
-
-// Unauthorized publish throws AuthorizationDeniedError
-await bus.publish('payment.processed', { amount: 1000 });
-```
-
-### Request / Response (RPC)
-
-```typescript
-// Service side
-bus.respond<{ userId: string }, { name: string }>('user.fetch', async (envelope) => {
-  const user = await db.users.findById(envelope.payload.userId);
-  return { name: user.name };
-});
-
-// Caller side
-const { response } = bus.request<{ userId: string }, { name: string }>(
-  'user.fetch',
-  { userId: 'usr_123' },
-  { timeoutMs: 5_000 }
-);
-
-const envelope = await response;
-console.log(envelope.payload.name); // "Alice"
-```
-
-### Replay
-
-```typescript
-const bus = getBus('app', {
-  replay: { limit: 50, ttl: 300_000 } // Keep last 50 events for 5 minutes
-});
-
-await bus.publish('app.config.loaded', { version: '2.1.0' });
-
-// Late subscriber immediately receives the stored event
-bus.subscribe('app.config.loaded', (e) => {
-  initializeApp(e.payload.version);
-});
-
-// With time filter
-bus.subscribe('audit.log', callback, {
-  replay: true,
-  replayLastMs: 30 * 60 * 1000, // only last 30 minutes
-});
-```
-
----
-
-## Security
-
-### Signing & Verification
-
-```typescript
-const bus = getBus('secure', {
-  enableSigning:    true,
-  verifySignatures: true,
-  signingSecret:    process.env.SIGNING_SECRET,
-});
-// All envelopes are HMAC-SHA256 signed.
-// Inbound envelopes with invalid or missing signatures are silently dropped.
-```
-
-### Rate Limiting
-
-```typescript
-const bus = getBus('api', {
-  rateLimit: 100, // max 100 events/sec per source
-});
-```
-
-### Payload Size Limits
-
-```typescript
-const bus = getBus('untrusted', {
-  maxPayloadBytes: 16_384, // 16 KB maximum
-});
-// Exceeding limit throws PayloadTooLargeError before middleware runs
-```
-
-### Subscription Limits (DoS protection)
-
-```typescript
-const bus = getBus('public', {
-  maxSubscriptions: 1_000,
-});
-// Exceeding throws SubscriptionLimitError
-```
-
-### Replay Attack Prevention
-
-```typescript
-const bus = getBus('realtime', {
-  enableReplayPrevention: true,
-  // Monotonically increasing sequence numbers are enforced.
-  // Out-of-order or repeated sequences throw ReplayAttackError.
-});
-```
-
-### Namespace Isolation
-
-```typescript
-const tenantA = getBus('tenant-a');
-const tenantB = getBus('tenant-b');
-
-// Cross-tenant publish is structurally impossible —
-// each namespace is a completely independent EventBus instance.
-await tenantA.publish('order.created', payload);
-// tenantB subscribers NEVER receive this event
-```
-
----
-
-## Transport Adapters
-
-### WebSocket
-
-```typescript
-import { WebSocketTransport } from '@ga-pubsub/websocket';
-
-const bus = getBus('app', {
-  transport: new WebSocketTransport({
-    url:                 'wss://events.example.com/ws',
-    token:               () => auth.getAccessToken(),
-    heartbeatInterval:   30_000,
-    maxReconnectAttempts: 0,       // unlimited
-    requireAck:          true,
-  })
-});
-```
-
-### Redis
-
-```typescript
-import Redis from 'ioredis';
-import { RedisTransport } from '@ga-pubsub/redis';
-
-const bus = getBus('app', {
-  transport: new RedisTransport({
-    client:        new Redis({ host: 'redis.internal', tls: {} }),
-    keyPrefix:     'myapp',
-    enableStreams:  true,
-    consumerGroup: 'payment-svc',
-    delivery:      'at-least-once',
-  })
-});
-```
-
-### Kafka
-
-```typescript
-import { Kafka } from 'kafkajs';
-import { KafkaTransport } from '@ga-pubsub/kafka';
-
-const bus = getBus('app', {
-  transport: new KafkaTransport({
-    kafka:         new Kafka({ brokers: ['kafka:9092'] }),
-    consumerGroup: 'analytics-service',
-    topics:        ['payments.**', 'users.*'],
-    delivery:      'best-effort',
-  })
-});
-```
-
-### NATS
-
-```typescript
-import { connect } from 'nats';
-import { NATSTransport } from '@ga-pubsub/nats';
-
-const nc = await connect({ servers: 'nats://events.internal:4222' });
-const bus = getBus('app', {
-  transport: new NATSTransport({
-    nc,
-    enableJetStream: true,
-    stream:          'GA_PUBSUB',
-    queueGroup:      'notification-workers',
-  })
-});
-```
-
----
-
-## Framework Integrations
-
-### React
-
-```tsx
-import { createReactHook } from 'ga-pubsub/integrations';
-import { getBus } from 'ga-pubsub';
-import React from 'react';
-
-const bus = getBus('app');
-const useEventBus = createReactHook(React);
-
-function CartBadge() {
-  const { lastEnvelope } = useEventBus<{ items: number }>(bus, 'cart.updated');
-  return <span>{lastEnvelope?.payload.items ?? 0}</span>;
-}
-```
-
-### Vue 3
-
-```ts
-import { createVueComposable } from 'ga-pubsub/integrations';
-import { ref, readonly, onUnmounted } from 'vue';
-import { getBus } from 'ga-pubsub';
-
-const bus = getBus('app');
-const useEventBus = createVueComposable({ ref, readonly, onUnmounted });
-
-const { lastEnvelope, publish } = useEventBus<{ count: number }>(bus, 'counter.updated');
-```
-
-### Express
-
-```typescript
-import express from 'express';
-import { createExpressMiddleware } from 'ga-pubsub/integrations';
-import { getBus } from 'ga-pubsub';
-
-const bus = getBus('api');
-const app = express();
-app.use(createExpressMiddleware(bus));
-
-app.post('/orders', async (req, res) => {
-  // req.eventBus auto-propagates correlation/tenant/user from headers
-  await req.eventBus.publish('order.created', req.body);
-  res.status(201).json({ ok: true });
-});
-```
-
-### NestJS
-
-```typescript
-// app.module.ts
-import { Module } from '@nestjs/common';
-import { createNestModule, PUBSUB_BUS } from 'ga-pubsub/integrations';
-
-@Module({
-  imports: [
-    createNestModule({
-      namespace:     'myapp',
-      enableSigning: true,
-      signingSecret: process.env.PUBSUB_SECRET,
-    })
-  ]
-})
-export class AppModule {}
-
-// payment.service.ts
-@Injectable()
-export class PaymentService {
-  constructor(@Inject(PUBSUB_BUS) private readonly bus: EventBus) {}
-
-  async processPayment(orderId: string, amount: number) {
-    await this.bus.publish('payment.processed', { orderId, amount });
-  }
-}
-```
-
----
-
-## Observability
-
-### Built-in Metrics
-
-```typescript
-const metrics = bus.getMetrics();
-// {
-//   publishCount:         12_450,
-//   subscribeCount:       38,
-//   failedDeliveries:     2,
-//   middlewareRejections: 0,
-//   authorizationDenials: 0,
-//   validationFailures:   7,
-//   replayCount:          150,
-//   requestCount:         890,
-//   requestTimeouts:      1,
-//   p95LatencyMs:         0.42,
-//   activeSubscriptions:  38,
-//   historySize:          245,
-// }
-```
-
-### OpenTelemetry Integration
-
-```typescript
-import { metrics as otelMetrics, trace } from '@opentelemetry/api';
-
-const meter   = otelMetrics.getMeter('ga-pubsub');
-const pubCount = meter.createCounter('ga_pubsub_publish_total');
-const latency  = meter.createHistogram('ga_pubsub_publish_latency_ms');
-
-const bus = getBus('app', {
-  telemetry: {
-    onPublish(envelope, latencyMs) {
-      pubCount.add(1, { event: envelope.event, namespace: envelope.namespace });
-      latency.record(latencyMs, { event: envelope.event });
-    },
-    onError(error, ctx) {
-      console.error(`[${ctx.phase}]`, error.message, ctx.eventName);
-    },
-  }
-});
-```
-
----
-
-## Multi-Tenant Architecture
-
-```typescript
-import { getBus, destroyNamespace, listNamespaces } from 'ga-pubsub';
-
-function getTenantBus(tenantId: string) {
-  return getBus(`tenant-${tenantId}`, {
-    tenantId,
-    maxPayloadBytes:  65_536,
-    maxSubscriptions: 10_000,
-    rateLimit:        500,
-  });
-}
-
-// Tenant onboarding
-const busTenantA = getTenantBus('acme-corp');
-await busTenantA.publish('tenant.initialized', { plan: 'enterprise' });
-
-// Tenant offboarding — destroys bus, clears subscriptions, disconnects transport
-await destroyNamespace('tenant-acme-corp');
-
-// Audit all active namespaces
-console.log(listNamespaces()); // ['default', 'tenant-acme-corp', 'analytics']
-```
-
----
-
-## Performance
-
-| Metric | Target | How |
-|--------|--------|-----|
-| Exact subscription lookup | O(1) | Hash map index |
-| Wildcard matching | O(k) per pattern | Pre-compiled trie + LRU cache |
-| Memory per subscription | ~200 bytes | Minimal record structure |
-| Max subscriptions | 100,000+ | Verified by stress test |
-| Throughput (in-memory) | 1M+ events/day | Sequential async dispatch |
-| P95 publish latency | < 1 ms | Ring-buffer sampled |
-| Startup overhead | None | Lazy initialization |
-
----
-
-## Security Checklist
-
-- [x] HMAC-SHA256 envelope signing
-- [x] Signature verification (constant-time comparison)
-- [x] Replay attack prevention (monotonic sequence tracking)
-- [x] Rate limiting (token bucket per source)
-- [x] Payload size enforcement
-- [x] Event TTL expiration
-- [x] Prototype pollution prevention (structured clone / JSON round-trip)
-- [x] Namespace isolation (structurally separate bus instances)
-- [x] Authorization layer (per-event authorizer functions)
-- [x] Schema validation (Zod / JSON Schema / custom)
-- [x] No unsafe defaults (signing must be explicitly enabled)
-- [x] LRU-bounded pattern cache (prevents memory exhaustion from adversarial patterns)
-- [x] Bounded rate-limit source tracking
-- [x] No sensitive data logged (secrets and signatures excluded from all log output)
-
----
-
-## Testing
+## Development
 
 ```bash
-# Unit tests
+npm install
+npm run build
 npm test
-
-# With coverage report
-npm run test:coverage
-
-# Stress tests (100k subscriptions, 10k sequential publishes)
-npm run test:stress
-
-# Security-focused tests
-npm run test:security
 ```
 
----
+`npm run build` builds only `packages/core`. Adapter packages are developed and released from their individual PRO repositories.
 
 ## Documentation
 
-Full API reference, guides, and examples: **[deslay-ai.web.app/ga-pubsub-docs/reference](https://deslay-ai.web.app/ga-pubsub-docs/reference)**
-
----
-
-## Authors
-
-| | Name | Website |
-|--|------|---------|
-| | [**Ajithraj G**](https://ajithraj-g.web.app) | [ajithraj-g.web.app](https://ajithraj-g.web.app) |
-| | [**Gowri KS**](https://gowri-ks.web.app) | [gowri-ks.web.app](https://gowri-ks.web.app) |
-
----
+The complete browser guide, API reference, and copy-ready example are available in [`packages/core/README.md`](./packages/core/README.md) and [`packages/core/examples/usage.ts`](./packages/core/examples/usage.ts).
 
 ## License
 
-Elastic License 2.0 © [Ajithraj G](https://ajithraj-g.web.app) & [Gowri KS](https://gowri-ks.web.app)
-
-See [LICENSE](./LICENSE) for full terms.
+Elastic License 2.0 © Ajithraj G and Gowri KS. See [LICENSE](./LICENSE).

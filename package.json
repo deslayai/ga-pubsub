@@ -2,28 +2,17 @@
   "name": "ga-pubsub-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "GA-PubSub \u2014 Enterprise-grade, security-first, transport-agnostic eventing platform",
+  "type": "module",
+  "description": "GA-PubSub Core \u2014 free browser-only, in-memory pub/sub for TypeScript",
   "workspaces": [
-    "packages/core",
-    "packages/broadcast-channel",
-    "packages/kafka",
-    "packages/nats",
-    "packages/rabbitmq",
-    "packages/redis",
-    "packages/sse",
-    "packages/websocket"
+    "packages/core"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "vitest run --exclude 'tests/integration/transports.test.ts'",
+    "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:stress": "vitest run tests/stress",
-    "test:security": "vitest run tests/security",
-    "test:integration": "vitest run tests/integration/integration.test.ts",
-    "test:transports": "vitest run tests/integration/transports.test.ts",
     "test:unit": "vitest run tests/unit",
-    "test:all": "vitest run",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "lint": "eslint 'packages/*/src/**/*.ts'",
     "lint:fix": "eslint 'packages/*/src/**/*.ts' --fix",
@@ -38,34 +27,26 @@
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "@vitest/coverage-v8": "^1.0.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^8.0.0",
     "typedoc": "^0.25.0",
     "typescript": "^5.4.0",
-    "vitest": "^1.0.0"
+    "vitest": "^4.1.11"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "keywords": [
     "pubsub",
     "event-bus",
     "eventing",
     "message-bus",
-    "enterprise",
-    "security",
-    "transport-agnostic",
-    "websocket",
-    "redis",
-    "kafka",
-    "nats",
-    "rabbitmq",
-    "serverless",
-    "edge",
+    "browser",
+    "in-memory",
     "typescript"
   ],
   "author": "Ajithraj G",
-  "license": "MIT",
+  "license": "Elastic-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/ga-pubsub/ga-pubsub.git"

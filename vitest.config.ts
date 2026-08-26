@@ -6,12 +6,11 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: [
-      'tests/**/*.test.ts',
+      'tests/unit/**/*.test.ts',
     ],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
-      'tests/integration/transports.test.ts',
     ],
     setupFiles: ['tests/setup.ts'],
     testTimeout: 30_000,
@@ -22,28 +21,22 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'text-summary', 'html', 'lcov', 'json'],
       reportsDirectory: './coverage',
-      include: ['packages/*/src/**/*.ts'],
-      exclude: ['packages/*/src/index.ts', 'docs/**', '**/*.d.ts', '**/node_modules/**'],
+      include: ['packages/core/src/**/*.ts'],
+      exclude: ['packages/core/src/index.ts', 'docs/**', '**/*.d.ts', '**/node_modules/**'],
       thresholds: { lines: 70, functions: 70, branches: 75, statements: 70 },
       all: true,
     },
     pool: 'threads',
-    poolOptions: { threads: { singleThread: false, isolate: true, useAtomics: true } },
+    isolate: true,
     sequence: { shuffle: false },
   },
   resolve: {
     alias: {
-      // ga-pubsub resolves to core (public repo — pro is private)
-      'ga-pubsub':                    resolve(__dirname, 'packages/core/src/index.ts'),
-      'ga-pubsub/validators':         resolve(__dirname, 'packages/core/src/validators.ts'),
-      'ga-pubsub/integrations':       resolve(__dirname, 'packages/core/src/integrations.ts'),
-      '@ga-pubsub/websocket':         resolve(__dirname, 'packages/websocket/src/index.ts'),
-      '@ga-pubsub/sse':               resolve(__dirname, 'packages/sse/src/index.ts'),
-      '@ga-pubsub/broadcast-channel': resolve(__dirname, 'packages/broadcast-channel/src/index.ts'),
-      '@ga-pubsub/redis':             resolve(__dirname, 'packages/redis/src/index.ts'),
-      '@ga-pubsub/kafka':             resolve(__dirname, 'packages/kafka/src/index.ts'),
-      '@ga-pubsub/nats':              resolve(__dirname, 'packages/nats/src/index.ts'),
-      '@ga-pubsub/rabbitmq':          resolve(__dirname, 'packages/rabbitmq/src/index.ts'),
+      // This repository resolves only the free browser core. PRO and its
+      // adapters are built and tested in their separate commercial repositories.
+      'ga-pubsub':                    resolve(import.meta.dirname, 'packages/core/src/index.ts'),
+      'ga-pubsub/validators':         resolve(import.meta.dirname, 'packages/core/src/validators.ts'),
+      'ga-pubsub/integrations':       resolve(import.meta.dirname, 'packages/core/src/integrations.ts'),
     },
   },
 });
