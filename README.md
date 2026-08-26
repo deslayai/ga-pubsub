@@ -29,7 +29,7 @@ Those capabilities belong exclusively to the separately licensed commercial suit
 - `@deslayai/ga-pubsub-pro` — paid frontend/backend runtime built on `ga-pubsub`.
 - Nine paid `@deslayai/ga-pubsub-*` adapters — HTTP, WebSocket, SSE, Socket.IO, BroadcastChannel, Redis, Kafka, NATS, and RabbitMQ.
 
-The historical `packages/*` transport directories are not npm workspaces, are not part of the free package build, and must not be documented or published as core features. The maintained adapters live in their separate PRO repositories.
+Transport adapter source is intentionally absent from this repository. The maintained adapters live in their separate commercial PRO repositories and use the `@deslayai/ga-pubsub-*` package scope.
 
 ## Installation
 

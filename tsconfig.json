@@ -8,14 +8,7 @@
     "noEmit": true
   },
   "references": [
-    { "path": "./packages/core" },
-    { "path": "./packages/websocket" },
-    { "path": "./packages/sse" },
-    { "path": "./packages/broadcast-channel" },
-    { "path": "./packages/redis" },
-    { "path": "./packages/kafka" },
-    { "path": "./packages/nats" },
-    { "path": "./packages/rabbitmq" }
+    { "path": "./packages/core" }
   ],
   "files": []
 }
