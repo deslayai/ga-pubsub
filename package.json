@@ -1,6 +1,6 @@
 {
   "name": "ga-pubsub",
-  "version": "3.1.0",
+  "version": "3.1.2",
   "private": true,
   "type": "module",
   "description": "GA-PubSub Core \u2014 free browser-only, in-memory pub/sub for TypeScript",
